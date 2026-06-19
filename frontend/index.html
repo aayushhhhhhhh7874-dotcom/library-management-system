@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Library Management System</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">LM</div>
+          <div>
+            <h1>Library Desk</h1>
+            <p>Management System</p>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Main navigation">
+          <button class="nav-item is-active" data-view="books">Books</button>
+          <button class="nav-item" data-view="borrow">Borrow</button>
+          <button class="nav-item" data-view="members">Members</button>
+          <button class="nav-item" data-view="notifications">Notifications</button>
+          <button class="nav-item" data-view="reports">Reports</button>
+        </nav>
+
+        <div class="session-panel">
+          <p class="eyebrow">Signed in</p>
+          <strong id="sessionName">Not logged in</strong>
+          <span id="sessionRole">Use demo credentials</span>
+          <button id="logoutBtn" class="ghost-button" type="button">Sign out</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Backend API</p>
+            <h2 id="viewTitle">Books</h2>
+          </div>
+          <div class="topbar-actions">
+            <label class="api-field">
+              <span>API URL</span>
+              <input id="apiBaseInput" type="url" value="http://localhost:5000">
+            </label>
+            <button id="refreshBtn" class="icon-button" type="button" title="Refresh current view">R</button>
+          </div>
+        </header>
+
+        <section id="authPanel" class="auth-band">
+          <div class="auth-copy">
+            <p class="eyebrow">Access</p>
+            <h2>Login</h2>
+          </div>
+          <form id="loginForm" class="auth-form">
+            <label>
+              <span>Email</span>
+              <input name="email" type="email" value="librarian@example.com" required>
+            </label>
+            <label>
+              <span>Password</span>
+              <input name="password" type="password" value="Password@123" required>
+            </label>
+            <button class="primary-button" type="submit">Login</button>
+          </form>
+          <div class="demo-logins">
+            <button class="ghost-button" type="button" data-demo-login="librarian">Librarian</button>
+            <button class="ghost-button" type="button" data-demo-login="member">Member</button>
+            <button class="ghost-button" type="button" data-demo-login="late">Overdue</button>
+          </div>
+        </section>
+
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+        <section class="view is-visible" id="booksView">
+          <div class="toolbar">
+            <form id="bookSearchForm" class="filter-form">
+              <input name="search" type="search" placeholder="Search title, ISBN, author">
+              <input name="author" type="search" placeholder="Author">
+              <select name="availability">
+                <option value="">All availability</option>
+                <option value="available">Available</option>
+                <option value="unavailable">Unavailable</option>
+              </select>
+              <button class="secondary-button" type="submit">Search</button>
+            </form>
+          </div>
+
+          <div class="split-grid">
+            <section class="panel">
+              <div class="panel-header">
+                <h3>Catalog</h3>
+                <span id="booksCount" class="pill">0</span>
+              </div>
+              <div id="booksList" class="data-list"></div>
+            </section>
+
+            <section class="panel librarian-only">
+              <div class="panel-header">
+                <h3>Add Category</h3>
+              </div>
+              <form id="categoryForm" class="stack-form">
+                <label>
+                  <span>Name</span>
+                  <input name="name" type="text" placeholder="Technology" required>
+                </label>
+                <label>
+                  <span>Description</span>
+                  <textarea name="description" rows="2" placeholder="Programming and computer science"></textarea>
+                </label>
+                <button class="primary-button" type="submit">Save Category</button>
+              </form>
+
+              <div class="panel-divider"></div>
+
+              <div class="panel-header">
+                <h3>Add Book</h3>
+              </div>
+              <form id="bookForm" class="stack-form">
+                <label>
+                  <span>Title</span>
+                  <input name="title" type="text" required>
+                </label>
+                <label>
+                  <span>ISBN</span>
+                  <input name="isbn" type="text" required>
+                </label>
+                <label>
+                  <span>Author</span>
+                  <input name="author" type="text" required>
+                </label>
+                <label>
+                  <span>Category</span>
+                  <select name="category" id="bookCategorySelect" required></select>
+                </label>
+                <div class="form-row">
+                  <label>
+                    <span>Copies</span>
+                    <input name="totalCopies" type="number" min="0" value="1" required>
+                  </label>
+                  <label>
+                    <span>Shelf</span>
+                    <input name="shelfLocation" type="text" placeholder="T-01">
+                  </label>
+                </div>
+                <button class="primary-button" type="submit">Save Book</button>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="borrowView">
+          <div class="split-grid">
+            <section class="panel">
+              <div class="panel-header">
+                <h3>Borrowing History</h3>
+                <button id="loadHistoryBtn" class="icon-button" type="button" title="Load history">R</button>
+              </div>
+              <div id="historyList" class="data-list"></div>
+            </section>
+
+            <section class="panel librarian-only">
+              <div class="panel-header">
+                <h3>Overdue Records</h3>
+                <button id="loadOverdueBtn" class="icon-button" type="button" title="Load overdue records">R</button>
+              </div>
+              <div id="overdueList" class="data-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="membersView">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Members</h3>
+              <button id="loadMembersBtn" class="icon-button" type="button" title="Load members">R</button>
+            </div>
+            <div id="membersList" class="data-list"></div>
+          </div>
+        </section>
+
+        <section class="view" id="notificationsView">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Notifications</h3>
+              <button id="loadNotificationsBtn" class="icon-button" type="button" title="Load notifications">R</button>
+            </div>
+            <div id="notificationsList" class="data-list"></div>
+          </div>
+        </section>
+
+        <section class="view" id="reportsView">
+          <div class="report-grid">
+            <section class="panel">
+              <div class="panel-header">
+                <h3>Inventory</h3>
+              </div>
+              <div id="inventoryReport" class="metric-grid"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-header">
+                <h3>Most Borrowed</h3>
+              </div>
+              <div id="borrowedReport" class="data-list"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-header">
+                <h3>Active Members</h3>
+              </div>
+              <div id="activeMembersReport" class="data-list"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-header">
+                <h3>Overdue Report</h3>
+              </div>
+              <div id="overdueReport" class="data-list"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

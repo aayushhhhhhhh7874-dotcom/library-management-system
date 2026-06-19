@@ -1,0 +1,404 @@
+openapi: 3.0.3
+info:
+  title: Library Management System API
+  version: 1.0.0
+  description: REST API for authentication, catalog management, member management, borrowing, overdue tracking, notifications, and reports.
+servers:
+  - url: http://localhost:5000
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    AuthRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          example: librarian@example.com
+        password:
+          type: string
+          example: Password@123
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [librarian, member]
+        librarianInviteCode:
+          type: string
+          description: Required when registering a librarian.
+    CategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    BookRequest:
+      type: object
+      required: [title, isbn, author, category, totalCopies]
+      properties:
+        title:
+          type: string
+        isbn:
+          type: string
+        author:
+          type: string
+        category:
+          type: string
+        publisher:
+          type: string
+        publishedYear:
+          type: integer
+        totalCopies:
+          type: integer
+        availableCopies:
+          type: integer
+        shelfLocation:
+          type: string
+    BorrowRequest:
+      type: object
+      properties:
+        memberId:
+          type: string
+          description: Required when librarian issues a book.
+        dueDate:
+          type: string
+          format: date-time
+        notes:
+          type: string
+    Success:
+      type: object
+      properties:
+        status:
+          type: string
+          example: success
+    Error:
+      type: object
+      properties:
+        status:
+          type: string
+          example: fail
+        message:
+          type: string
+paths:
+  /:
+    get:
+      security: []
+      summary: API welcome route
+      responses:
+        "200":
+          description: API status information
+  /health:
+    get:
+      security: []
+      summary: Health check
+      responses:
+        "200":
+          description: Server health
+  /api/v1/auth/register:
+    post:
+      security: []
+      summary: Register librarian or member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered
+  /api/v1/auth/login:
+    post:
+      security: []
+      summary: Login and receive JWT token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRequest"
+      responses:
+        "200":
+          description: Login successful
+  /api/v1/auth/me:
+    get:
+      summary: Get current profile
+      responses:
+        "200":
+          description: Current user
+    patch:
+      summary: Update current profile
+      responses:
+        "200":
+          description: Updated profile
+  /api/v1/categories:
+    get:
+      security: []
+      summary: List categories
+      responses:
+        "200":
+          description: Category list
+    post:
+      summary: Create category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryRequest"
+      responses:
+        "201":
+          description: Category created
+  /api/v1/categories/{id}:
+    patch:
+      summary: Update category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Category updated
+    delete:
+      summary: Delete category
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Category deleted
+  /api/v1/books:
+    get:
+      security: []
+      summary: Search and filter books
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: author
+          schema:
+            type: string
+        - in: query
+          name: availability
+          schema:
+            type: string
+            enum: [available, unavailable]
+      responses:
+        "200":
+          description: Book list
+    post:
+      summary: Add new book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookRequest"
+      responses:
+        "201":
+          description: Book created
+  /api/v1/books/{id}:
+    get:
+      security: []
+      summary: Get book details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Book details
+    patch:
+      summary: Update book
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Book updated
+    delete:
+      summary: Delete book
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Book deleted
+  /api/v1/members:
+    get:
+      summary: List members
+      responses:
+        "200":
+          description: Member list
+  /api/v1/members/me/history:
+    get:
+      summary: View current member borrowing history
+      responses:
+        "200":
+          description: Borrow history
+  /api/v1/members/{id}:
+    get:
+      summary: Get member details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Member details
+  /api/v1/members/{id}/status:
+    patch:
+      summary: Update member status and borrow limit
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Member status updated
+  /api/v1/members/{id}/history:
+    get:
+      summary: View member borrowing history
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Borrow history
+  /api/v1/borrows/{bookId}:
+    post:
+      summary: Borrow a book
+      parameters:
+        - in: path
+          name: bookId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BorrowRequest"
+      responses:
+        "201":
+          description: Borrow record created
+  /api/v1/borrows/return/{recordId}:
+    patch:
+      summary: Return a borrowed book
+      parameters:
+        - in: path
+          name: recordId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Book returned
+  /api/v1/borrows/history:
+    get:
+      summary: Borrowing history
+      responses:
+        "200":
+          description: Borrowing history
+  /api/v1/borrows/overdue:
+    get:
+      summary: List overdue records
+      responses:
+        "200":
+          description: Overdue records
+  /api/v1/borrows/availability/{bookId}:
+    get:
+      summary: Check book availability
+      parameters:
+        - in: path
+          name: bookId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Availability status
+  /api/v1/notifications:
+    get:
+      summary: List current user's notifications
+      responses:
+        "200":
+          description: Notification list
+  /api/v1/notifications/{id}/read:
+    patch:
+      summary: Mark notification as read
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Notification updated
+  /api/v1/reports/most-borrowed-books:
+    get:
+      summary: Most borrowed books report
+      responses:
+        "200":
+          description: Report data
+  /api/v1/reports/active-members:
+    get:
+      summary: Active members report
+      responses:
+        "200":
+          description: Report data
+  /api/v1/reports/overdue-records:
+    get:
+      summary: Overdue records report
+      responses:
+        "200":
+          description: Report data
+  /api/v1/reports/inventory-status:
+    get:
+      summary: Inventory status report
+      responses:
+        "200":
+          description: Report data
