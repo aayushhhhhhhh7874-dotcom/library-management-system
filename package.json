@@ -5,9 +5,12 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "start:local": "node scripts/dev-local-api.js",
     "dev": "nodemon src/server.js",
+    "dev:local": "node scripts/dev-local-api.js",
     "seed": "node src/seed.js",
-    "check": "node scripts/check-syntax.js"
+    "check": "node scripts/check-syntax.js && node scripts/verify-catalog.js",
+    "verify:catalog": "node scripts/verify-catalog.js"
   },
   "keywords": [
     "library-management",

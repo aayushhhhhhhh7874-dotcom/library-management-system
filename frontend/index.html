@@ -3,223 +3,300 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Library Management System</title>
+    <meta name="theme-color" content="#17324d">
+    <title>StackShelf CSE Library</title>
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true">LM</div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="loadingBar" class="loading-bar" aria-hidden="true"></div>
+
+    <section id="authScreen" class="auth-screen">
+      <div class="auth-identity">
+        <div class="auth-brand">
+          <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
           <div>
-            <h1>Library Desk</h1>
-            <p>Management System</p>
+            <strong>StackShelf</strong>
+            <span>CSE Library</span>
           </div>
         </div>
 
-        <nav class="nav" aria-label="Main navigation">
-          <button class="nav-item is-active" data-view="books">Books</button>
-          <button class="nav-item" data-view="borrow">Borrow</button>
-          <button class="nav-item" data-view="members">Members</button>
-          <button class="nav-item" data-view="notifications">Notifications</button>
-          <button class="nav-item" data-view="reports">Reports</button>
+        <div class="auth-heading">
+          <p class="kicker">Campus academic library</p>
+          <h1>Computer science, organized for every semester.</h1>
+          <p>BTech CSE reference books, lab manuals, exam companions, and project work in one catalog.</p>
+        </div>
+
+        <div class="auth-stat-row" aria-label="Catalog summary">
+          <div><strong>1,000</strong><span>Titles</span></div>
+          <div><strong>25</strong><span>Subjects</span></div>
+          <div><strong>8</strong><span>Semesters</span></div>
+        </div>
+
+        <div class="shelf-visual" aria-hidden="true">
+          <span class="book-spine spine-a"></span>
+          <span class="book-spine spine-b"></span>
+          <span class="book-spine spine-c"></span>
+          <span class="book-spine spine-d"></span>
+          <span class="book-spine spine-e"></span>
+          <span class="book-spine spine-f"></span>
+          <span class="book-spine spine-g"></span>
+        </div>
+      </div>
+
+      <div class="auth-pane">
+        <div class="auth-box">
+          <div class="auth-mobile-brand">
+            <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
+            <strong>StackShelf</strong>
+          </div>
+
+          <div class="segmented-control" role="tablist" aria-label="Account access">
+            <button class="auth-tab is-active" type="button" role="tab" aria-selected="true" data-auth-mode="login">Sign in</button>
+            <button class="auth-tab" type="button" role="tab" aria-selected="false" data-auth-mode="signup">Create account</button>
+          </div>
+
+          <form id="loginForm" class="auth-form" autocomplete="on">
+            <div class="form-heading">
+              <p class="kicker">Welcome back</p>
+              <h2>Sign in to your library</h2>
+            </div>
+            <label class="field">
+              <span>Email address</span>
+              <input name="email" type="email" autocomplete="email" value="librarian@example.com" required>
+            </label>
+            <label class="field">
+              <span>Password</span>
+              <input name="password" type="password" autocomplete="current-password" value="Password@123" minlength="8" required>
+            </label>
+            <button class="button button-primary button-wide" type="submit">Sign in</button>
+            <div class="demo-accounts">
+              <span>Demo accounts</span>
+              <button type="button" data-demo-account="librarian">Librarian</button>
+              <button type="button" data-demo-account="member">Student</button>
+              <button type="button" data-demo-account="late">Overdue</button>
+            </div>
+          </form>
+
+          <form id="signupForm" class="auth-form is-hidden" autocomplete="on">
+            <div class="form-heading">
+              <p class="kicker">Student registration</p>
+              <h2>Create your member account</h2>
+            </div>
+            <div class="form-grid two-columns">
+              <label class="field">
+                <span>Full name</span>
+                <input name="name" type="text" autocomplete="name" minlength="2" required>
+              </label>
+              <label class="field">
+                <span>Student ID</span>
+                <input name="studentId" type="text" placeholder="CSE2026005" minlength="4" required>
+              </label>
+            </div>
+            <label class="field">
+              <span>Email address</span>
+              <input name="email" type="email" autocomplete="email" required>
+            </label>
+            <div class="form-grid two-columns">
+              <label class="field">
+                <span>Phone</span>
+                <input name="phone" type="tel" autocomplete="tel" maxlength="20">
+              </label>
+              <label class="field">
+                <span>Semester</span>
+                <select name="semester" required>
+                  <option value="">Select</option>
+                  <option value="1">Semester 1</option>
+                  <option value="2">Semester 2</option>
+                  <option value="3">Semester 3</option>
+                  <option value="4">Semester 4</option>
+                  <option value="5">Semester 5</option>
+                  <option value="6">Semester 6</option>
+                  <option value="7">Semester 7</option>
+                  <option value="8">Semester 8</option>
+                </select>
+              </label>
+            </div>
+            <div class="form-grid two-columns">
+              <label class="field">
+                <span>Enrollment year</span>
+                <input name="enrollmentYear" type="number" min="2000" max="2026" value="2026" required>
+              </label>
+              <label class="field">
+                <span>Department</span>
+                <input name="department" type="text" value="Computer Science and Engineering" readonly>
+              </label>
+            </div>
+            <div class="form-grid two-columns">
+              <label class="field">
+                <span>Password</span>
+                <input name="password" type="password" autocomplete="new-password" minlength="8" required>
+              </label>
+              <label class="field">
+                <span>Confirm password</span>
+                <input name="confirmPassword" type="password" autocomplete="new-password" minlength="8" required>
+              </label>
+            </div>
+            <button class="button button-primary button-wide" type="submit">Create account</button>
+          </form>
+
+          <p id="authMessage" class="form-message" role="alert"></p>
+          <label class="api-setting">
+            <span>API server</span>
+            <input id="apiBaseInput" type="url" value="http://localhost:5000">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <div id="appShell" class="app-shell is-hidden">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
+          <div><strong>StackShelf</strong><span>CSE Library</span></div>
+        </div>
+
+        <nav class="primary-nav" aria-label="Primary navigation">
+          <button class="nav-button is-active" type="button" data-view="overview"><span class="nav-glyph">01</span>Overview</button>
+          <button class="nav-button" type="button" data-view="catalog"><span class="nav-glyph">02</span>Catalog</button>
+          <button class="nav-button" type="button" data-view="activity"><span class="nav-glyph">03</span>My books</button>
+          <button class="nav-button" type="button" data-view="notifications"><span class="nav-glyph">04</span>Notifications<span id="notificationBadge" class="nav-badge is-hidden">0</span></button>
+          <button class="nav-button librarian-only" type="button" data-view="members"><span class="nav-glyph">05</span>Members</button>
+          <button class="nav-button librarian-only" type="button" data-view="reports"><span class="nav-glyph">06</span>Reports</button>
         </nav>
 
-        <div class="session-panel">
-          <p class="eyebrow">Signed in</p>
-          <strong id="sessionName">Not logged in</strong>
-          <span id="sessionRole">Use demo credentials</span>
-          <button id="logoutBtn" class="ghost-button" type="button">Sign out</button>
+        <div class="sidebar-footer">
+          <div class="api-status"><span id="apiStatusDot"></span><div><strong id="apiStatusText">API status</strong><span id="apiStatusDetail">Checking</span></div></div>
+          <button id="logoutBtn" class="button button-quiet button-wide" type="button">Sign out</button>
         </div>
       </aside>
 
-      <main class="main">
+      <main class="main-content">
         <header class="topbar">
-          <div>
-            <p class="eyebrow">Backend API</p>
-            <h2 id="viewTitle">Books</h2>
+          <button id="menuButton" class="icon-button menu-button" type="button" aria-label="Open navigation">Menu</button>
+          <div class="topbar-title">
+            <p id="viewKicker" class="kicker">Library workspace</p>
+            <h1 id="viewTitle">Overview</h1>
           </div>
           <div class="topbar-actions">
-            <label class="api-field">
-              <span>API URL</span>
-              <input id="apiBaseInput" type="url" value="http://localhost:5000">
-            </label>
-            <button id="refreshBtn" class="icon-button" type="button" title="Refresh current view">R</button>
+            <button id="globalSearchButton" class="search-trigger" type="button"><span>Search catalog</span><kbd>/</kbd></button>
+            <button id="refreshButton" class="icon-button" type="button" title="Refresh current view">Refresh</button>
+            <button id="profileButton" class="profile-button" type="button">
+              <span id="profileInitials" class="avatar">AK</span>
+              <span><strong id="profileName">Member</strong><small id="profileRole">Student</small></span>
+            </button>
           </div>
         </header>
 
-        <section id="authPanel" class="auth-band">
-          <div class="auth-copy">
-            <p class="eyebrow">Access</p>
-            <h2>Login</h2>
+        <section id="overviewView" class="view is-visible">
+          <div class="welcome-band">
+            <div>
+              <p class="kicker" id="welcomeKicker">BTech CSE library</p>
+              <h2 id="welcomeTitle">Good to see you.</h2>
+              <p id="welcomeText">Your academic catalog is ready.</p>
+            </div>
+            <button class="button button-light" type="button" data-go-view="catalog">Browse catalog</button>
           </div>
-          <form id="loginForm" class="auth-form">
-            <label>
-              <span>Email</span>
-              <input name="email" type="email" value="librarian@example.com" required>
-            </label>
-            <label>
-              <span>Password</span>
-              <input name="password" type="password" value="Password@123" required>
-            </label>
-            <button class="primary-button" type="submit">Login</button>
-          </form>
-          <div class="demo-logins">
-            <button class="ghost-button" type="button" data-demo-login="librarian">Librarian</button>
-            <button class="ghost-button" type="button" data-demo-login="member">Member</button>
-            <button class="ghost-button" type="button" data-demo-login="late">Overdue</button>
+
+          <div id="overviewMetrics" class="metric-strip"></div>
+
+          <div class="overview-grid">
+            <section class="section-block">
+              <div class="section-heading"><div><p class="kicker">Recommended</p><h2 id="recommendationTitle">For your semester</h2></div><button class="text-button" type="button" data-go-view="catalog">View all</button></div>
+              <div id="recommendedBooks" class="compact-book-list"></div>
+            </section>
+            <section class="section-block">
+              <div class="section-heading"><div><p class="kicker">Activity</p><h2>Current loans</h2></div><button class="text-button" type="button" data-go-view="activity">History</button></div>
+              <div id="overviewActivity" class="activity-list"></div>
+            </section>
           </div>
         </section>
 
-        <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-        <section class="view is-visible" id="booksView">
-          <div class="toolbar">
-            <form id="bookSearchForm" class="filter-form">
-              <input name="search" type="search" placeholder="Search title, ISBN, author">
-              <input name="author" type="search" placeholder="Author">
-              <select name="availability">
-                <option value="">All availability</option>
-                <option value="available">Available</option>
-                <option value="unavailable">Unavailable</option>
-              </select>
-              <button class="secondary-button" type="submit">Search</button>
+        <section id="catalogView" class="view">
+          <div class="catalog-toolbar">
+            <form id="catalogFilterForm" class="catalog-filters">
+              <label class="search-field"><span class="sr-only">Search books</span><input id="catalogSearchInput" name="search" type="search" placeholder="Title, author, ISBN, subject code"></label>
+              <label><span class="sr-only">Category</span><select id="categoryFilter" name="category"><option value="">All subjects</option></select></label>
+              <label><span class="sr-only">Semester</span><select name="semester"><option value="">All semesters</option><option value="1">Semester 1</option><option value="2">Semester 2</option><option value="3">Semester 3</option><option value="4">Semester 4</option><option value="5">Semester 5</option><option value="6">Semester 6</option><option value="7">Semester 7</option><option value="8">Semester 8</option></select></label>
+              <label><span class="sr-only">Availability</span><select name="availability"><option value="">Any availability</option><option value="available">Available now</option><option value="unavailable">Checked out</option></select></label>
+              <label><span class="sr-only">Sort</span><select name="sort"><option value="title">Title A-Z</option><option value="-publishedYear">Newest first</option><option value="-availableCopies">Most available</option></select></label>
+              <button class="button button-secondary" type="submit">Apply</button>
             </form>
+            <button id="addBookButton" class="button button-primary librarian-only" type="button">+ Add book</button>
           </div>
 
-          <div class="split-grid">
-            <section class="panel">
-              <div class="panel-header">
-                <h3>Catalog</h3>
-                <span id="booksCount" class="pill">0</span>
-              </div>
-              <div id="booksList" class="data-list"></div>
-            </section>
-
-            <section class="panel librarian-only">
-              <div class="panel-header">
-                <h3>Add Category</h3>
-              </div>
-              <form id="categoryForm" class="stack-form">
-                <label>
-                  <span>Name</span>
-                  <input name="name" type="text" placeholder="Technology" required>
-                </label>
-                <label>
-                  <span>Description</span>
-                  <textarea name="description" rows="2" placeholder="Programming and computer science"></textarea>
-                </label>
-                <button class="primary-button" type="submit">Save Category</button>
-              </form>
-
-              <div class="panel-divider"></div>
-
-              <div class="panel-header">
-                <h3>Add Book</h3>
-              </div>
-              <form id="bookForm" class="stack-form">
-                <label>
-                  <span>Title</span>
-                  <input name="title" type="text" required>
-                </label>
-                <label>
-                  <span>ISBN</span>
-                  <input name="isbn" type="text" required>
-                </label>
-                <label>
-                  <span>Author</span>
-                  <input name="author" type="text" required>
-                </label>
-                <label>
-                  <span>Category</span>
-                  <select name="category" id="bookCategorySelect" required></select>
-                </label>
-                <div class="form-row">
-                  <label>
-                    <span>Copies</span>
-                    <input name="totalCopies" type="number" min="0" value="1" required>
-                  </label>
-                  <label>
-                    <span>Shelf</span>
-                    <input name="shelfLocation" type="text" placeholder="T-01">
-                  </label>
-                </div>
-                <button class="primary-button" type="submit">Save Book</button>
-              </form>
-            </section>
-          </div>
+          <div class="result-bar"><p id="catalogResultText">Loading catalog</p><button id="clearFiltersButton" class="text-button" type="button">Clear filters</button></div>
+          <div id="bookGrid" class="book-grid"></div>
+          <nav class="pagination" aria-label="Catalog pages"><button id="previousPageButton" class="button button-secondary" type="button">Previous</button><span id="pageStatus">Page 1</span><button id="nextPageButton" class="button button-secondary" type="button">Next</button></nav>
         </section>
 
-        <section class="view" id="borrowView">
-          <div class="split-grid">
-            <section class="panel">
-              <div class="panel-header">
-                <h3>Borrowing History</h3>
-                <button id="loadHistoryBtn" class="icon-button" type="button" title="Load history">R</button>
-              </div>
-              <div id="historyList" class="data-list"></div>
-            </section>
-
-            <section class="panel librarian-only">
-              <div class="panel-header">
-                <h3>Overdue Records</h3>
-                <button id="loadOverdueBtn" class="icon-button" type="button" title="Load overdue records">R</button>
-              </div>
-              <div id="overdueList" class="data-list"></div>
-            </section>
-          </div>
+        <section id="activityView" class="view">
+          <div class="section-heading page-heading"><div><p class="kicker">Borrowing</p><h2>Loan history</h2></div><select id="historyStatusFilter"><option value="">All records</option><option value="borrowed">Borrowed</option><option value="overdue">Overdue</option><option value="returned">Returned</option></select></div>
+          <div id="historyList" class="table-list"></div>
         </section>
 
-        <section class="view" id="membersView">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>Members</h3>
-              <button id="loadMembersBtn" class="icon-button" type="button" title="Load members">R</button>
-            </div>
-            <div id="membersList" class="data-list"></div>
-          </div>
+        <section id="notificationsView" class="view">
+          <div class="section-heading page-heading"><div><p class="kicker">Inbox</p><h2>Notifications</h2></div><select id="notificationFilter"><option value="">All notifications</option><option value="false">Unread</option><option value="true">Read</option></select></div>
+          <div id="notificationsList" class="notification-list"></div>
         </section>
 
-        <section class="view" id="notificationsView">
-          <div class="panel">
-            <div class="panel-header">
-              <h3>Notifications</h3>
-              <button id="loadNotificationsBtn" class="icon-button" type="button" title="Load notifications">R</button>
-            </div>
-            <div id="notificationsList" class="data-list"></div>
-          </div>
+        <section id="membersView" class="view librarian-only">
+          <div class="section-heading page-heading"><div><p class="kicker">Administration</p><h2>Members</h2></div><div class="inline-filters"><input id="memberSearchInput" type="search" placeholder="Search members"><select id="memberStatusFilter"><option value="">All statuses</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="expired">Expired</option></select></div></div>
+          <div id="membersList" class="table-list"></div>
         </section>
 
-        <section class="view" id="reportsView">
+        <section id="reportsView" class="view librarian-only">
+          <div class="section-heading page-heading"><div><p class="kicker">Analytics</p><h2>Library reports</h2></div></div>
+          <div id="reportMetrics" class="metric-strip"></div>
           <div class="report-grid">
-            <section class="panel">
-              <div class="panel-header">
-                <h3>Inventory</h3>
-              </div>
-              <div id="inventoryReport" class="metric-grid"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-header">
-                <h3>Most Borrowed</h3>
-              </div>
-              <div id="borrowedReport" class="data-list"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-header">
-                <h3>Active Members</h3>
-              </div>
-              <div id="activeMembersReport" class="data-list"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-header">
-                <h3>Overdue Report</h3>
-              </div>
-              <div id="overdueReport" class="data-list"></div>
-            </section>
+            <section class="section-block"><div class="section-heading"><h2>Most borrowed</h2></div><div id="mostBorrowedReport" class="rank-list"></div></section>
+            <section class="section-block"><div class="section-heading"><h2>Active members</h2></div><div id="activeMembersReport" class="rank-list"></div></section>
+            <section class="section-block report-wide"><div class="section-heading"><h2>Overdue records</h2></div><div id="overdueReport" class="table-list"></div></section>
           </div>
         </section>
       </main>
     </div>
+
+    <dialog id="bookDialog" class="modal">
+      <form id="bookForm" method="dialog" class="modal-form">
+        <div class="modal-header"><div><p class="kicker">Catalog management</p><h2>Add a CSE book</h2></div><button class="icon-button" type="button" data-close-dialog="bookDialog" aria-label="Close">Close</button></div>
+        <div class="form-grid two-columns">
+          <label class="field field-wide"><span>Title</span><input name="title" type="text" required></label>
+          <label class="field"><span>ISBN</span><input name="isbn" type="text" required></label>
+          <label class="field"><span>Author</span><input name="author" type="text" required></label>
+          <label class="field"><span>Subject</span><select id="bookCategorySelect" name="category" required></select></label>
+          <label class="field"><span>Subject code</span><input name="subjectCode" type="text" placeholder="CS402"></label>
+          <label class="field"><span>Semester</span><select name="semester"><option value="">Select</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></label>
+          <label class="field"><span>Publisher</span><input name="publisher" type="text"></label>
+          <label class="field"><span>Published year</span><input name="publishedYear" type="number" min="1000" max="2026"></label>
+          <label class="field"><span>Edition</span><input name="edition" type="text" placeholder="Edition 1"></label>
+          <label class="field"><span>Total copies</span><input name="totalCopies" type="number" min="0" value="3" required></label>
+          <label class="field"><span>Shelf</span><input name="shelfLocation" type="text" placeholder="CSE-S4-1001"></label>
+          <label class="field field-wide"><span>Description</span><textarea name="description" rows="3"></textarea></label>
+        </div>
+        <div class="modal-actions"><button class="button button-secondary" type="button" data-close-dialog="bookDialog">Cancel</button><button class="button button-primary" type="submit">Save book</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="profileDialog" class="modal modal-small">
+      <form id="profileForm" method="dialog" class="modal-form">
+        <div class="modal-header"><div><p class="kicker">Account</p><h2>Profile</h2></div><button class="icon-button" type="button" data-close-dialog="profileDialog" aria-label="Close">Close</button></div>
+        <label class="field"><span>Full name</span><input name="name" type="text" required></label>
+        <label class="field"><span>Phone</span><input name="phone" type="tel"></label>
+        <label class="field"><span>Address</span><textarea name="address" rows="3"></textarea></label>
+        <label class="field member-only"><span>Semester</span><select name="semester"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></label>
+        <div class="modal-actions"><button class="button button-secondary" type="button" data-close-dialog="profileDialog">Cancel</button><button class="button button-primary" type="submit">Save profile</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="issueDialog" class="modal modal-small">
+      <form id="issueForm" method="dialog" class="modal-form">
+        <div class="modal-header"><div><p class="kicker">Borrow desk</p><h2>Issue book</h2></div><button class="icon-button" type="button" data-close-dialog="issueDialog" aria-label="Close">Close</button></div>
+        <label class="field"><span>Active member</span><select id="issueMemberSelect" name="memberId" required><option value="">Select member</option></select></label>
+        <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Optional issue note"></textarea></label>
+        <div class="modal-actions"><button class="button button-secondary" type="button" data-close-dialog="issueDialog">Cancel</button><button class="button button-primary" type="submit">Issue book</button></div>
+      </form>
+    </dialog>
 
     <script src="./app.js"></script>
   </body>

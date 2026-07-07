@@ -1,127 +1,141 @@
-# Library Management System
+# StackShelf - BTech CSE Library Management System
 
-Backend-driven Library Management System built for the internship project requirements in the PDF. It includes authentication, role-based access control, catalog management, member management, borrow and return workflows, overdue tracking, notifications, reports, Swagger documentation, and a Postman collection.
+StackShelf is a full-stack library management project for BTech Computer Science and Engineering. It includes a responsive frontend, MongoDB persistence, member registration and sign-in, librarian administration, 1,000 seeded academic books, borrowing and returns, overdue tracking, notifications, analytics, Swagger documentation, and Postman requests.
 
-## Tech Stack
+## Included
 
-- Node.js and Express.js
-- MongoDB and Mongoose ODM
-- JWT authentication
-- bcrypt password hashing
-- Role-based access control for librarians and members
-- Joi request validation
-- Helmet, CORS, rate limiting, and centralized error handling
-- Swagger UI and Postman documentation
-- Static HTML, CSS, and JavaScript frontend dashboard
+- Dedicated Sign in and Create account screens
+- JWT authentication and bcrypt password hashing
+- MongoDB member profiles with student ID, semester, department, and enrollment year
+- Librarian and member role-based access control
+- Exactly 1,000 unique BTech CSE books across 25 subject categories and 8 semesters
+- Search by title, author, ISBN, publisher, tags, or subject code
+- Category, semester, availability, sorting, and pagination controls
+- Borrowing, librarian issue desk, returns, due dates, overdue records, and fines
+- Borrow, return, and overdue notifications
+- Member status and borrow-limit management
+- Inventory, popular-book, active-member, and overdue reports
+- Docker Compose setup with a persistent MongoDB volume
+- No-install local JSON database mode for quick demos
+- Swagger/OpenAPI and Postman documentation
+- Phase 2 submission checklist, deployment guide, and architecture diagrams
 
-## Project Structure
+## Phase 2 Submission
 
-```text
-internship project/
-  docs/
-    architecture.md
-    openapi.yaml
-    postman_collection.json
-  frontend/
-    app.js
-    index.html
-    styles.css
-  src/
-    config/
-    constants/
-    controllers/
-    middleware/
-    models/
-    routes/
-    utils/
-    validators/
-    app.js
-    seed.js
-    server.js
-  .env.example
-  package.json
-  README.md
-```
+- Submission checklist: `docs/phase-2-submission.md`
+- Architecture diagrams: `docs/architecture.md`
+- Deployment guide: `docs/deployment.md`
+- Swagger/OpenAPI: `docs/openapi.yaml` and `/api-docs`
+- Postman collection: `docs/postman_collection.json`
 
-## Setup
+## No-Install Local Demo
 
-1. Install Node.js and MongoDB.
-2. Open a terminal in this folder:
+Use this when Node is available but npm, MongoDB, or Docker are not installed yet.
 
 ```bash
 cd "C:\Users\ak960\OneDrive\Desktop\ayush\internship project"
+start-local-demo.bat
 ```
 
-3. Install packages:
+Open `http://localhost:5000`. The frontend and API run from the same port, and data is saved in `data/local-library-db.json`.
 
-```bash
-npm install
-```
-
-4. Create `.env` from `.env.example` and update values if needed:
-
-```bash
-copy .env.example .env
-```
-
-`LIBRARIAN_INVITE_CODE` is required when registering a new librarian through the API.
-
-5. Seed demo data:
-
-```bash
-npm run seed
-```
-
-6. Start the server:
-
-```bash
-npm run dev
-```
-
-The API runs at `http://localhost:5000`.
-
-The frontend dashboard runs at `http://localhost:5000/dashboard`.
-
-## Demo Accounts
-
-After running `npm run seed`:
+Demo accounts:
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Librarian | librarian@example.com | Password@123 |
-| Member | member@example.com | Password@123 |
-| Member with overdue record | late@example.com | Password@123 |
+| Librarian | `librarian@example.com` | `Password@123` |
+| Student member | `member@example.com` | `Password@123` |
+| Member with overdue book | `late@example.com` | `Password@123` |
 
-## Main API Modules
+## Recommended Start With Docker
 
-| Module | Endpoints |
+Requirements: Docker Desktop.
+
+```bash
+cd "C:\Users\ak960\OneDrive\Desktop\ayush\internship project"
+docker compose up -d --build
+docker compose --profile tools run --rm seed
+```
+
+Open:
+
+- Frontend: `http://localhost:5000/dashboard`
+- API health: `http://localhost:5000/health`
+- Swagger: `http://localhost:5000/api-docs`
+
+The MongoDB data is stored in the `stackshelf_mongodb_data` Docker volume and remains available after containers restart.
+
+## Local Start
+
+Requirements: Node.js 20+, npm, and MongoDB 7+.
+
+```bash
+cd "C:\Users\ak960\OneDrive\Desktop\ayush\internship project"
+copy .env.example .env
+npm install
+npm run seed
+npm run dev
+```
+
+Important: `npm run seed` clears the configured database and recreates the full demonstration dataset.
+
+## Demo Accounts
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Librarian | `librarian@example.com` | `Password@123` |
+| Student member | `member@example.com` | `Password@123` |
+| Member with overdue book | `late@example.com` | `Password@123` |
+
+New student accounts can be created from the frontend. The registration request is validated by the API, the password is hashed, and the profile is stored in the MongoDB `users` collection before the new user is signed in.
+
+## 1,000-Book Catalog
+
+The catalog generator is located at `src/data/cseBookCatalog.js`. It creates 40 unique academic titles for each of 25 BTech CSE subjects. Every record includes:
+
+- Unique title and valid unique ISBN-13
+- Author, publisher, publication year, and edition
+- Course, department, semester, and subject code
+- Category, tags, shelf location, description, and copy counts
+
+Verify it without MongoDB:
+
+```bash
+npm run verify:catalog
+```
+
+## Main Structure
+
+```text
+frontend/                 Authentication and dashboard UI
+src/data/                 1,000-book catalog generator
+src/models/               MongoDB/Mongoose schemas
+src/controllers/          Business logic
+src/routes/               REST API routes
+src/validators/           Joi request validation
+src/seed.js               Database seed workflow
+docs/openapi.yaml         Swagger specification
+docs/postman_collection.json
+Dockerfile
+docker-compose.yml
+```
+
+## Core API
+
+| Module | Routes |
 | --- | --- |
-| Auth | `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`, `PATCH /api/v1/auth/me` |
-| Categories | `GET /api/v1/categories`, `POST /api/v1/categories`, `PATCH /api/v1/categories/:id`, `DELETE /api/v1/categories/:id` |
-| Books | `GET /api/v1/books`, `POST /api/v1/books`, `GET /api/v1/books/:id`, `PATCH /api/v1/books/:id`, `DELETE /api/v1/books/:id` |
-| Members | `GET /api/v1/members`, `GET /api/v1/members/:id`, `PATCH /api/v1/members/:id/status`, `GET /api/v1/members/me/history` |
-| Borrowing | `POST /api/v1/borrows/:bookId`, `PATCH /api/v1/borrows/return/:recordId`, `GET /api/v1/borrows/history`, `GET /api/v1/borrows/overdue`, `GET /api/v1/borrows/availability/:bookId` |
+| Authentication | `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET/PATCH /api/v1/auth/me` |
+| Catalog | `GET/POST /api/v1/books`, `GET/PATCH/DELETE /api/v1/books/:id` |
+| Categories | `GET/POST /api/v1/categories`, `PATCH/DELETE /api/v1/categories/:id` |
+| Members | `GET /api/v1/members`, `GET /api/v1/members/:id`, `PATCH /api/v1/members/:id/status` |
+| Borrowing | `POST /api/v1/borrows/:bookId`, `PATCH /api/v1/borrows/return/:recordId`, `GET /api/v1/borrows/history` |
 | Notifications | `GET /api/v1/notifications`, `PATCH /api/v1/notifications/:id/read` |
-| Reports | `GET /api/v1/reports/most-borrowed-books`, `GET /api/v1/reports/active-members`, `GET /api/v1/reports/overdue-records`, `GET /api/v1/reports/inventory-status` |
+| Reports | `/api/v1/reports/most-borrowed-books`, `/active-members`, `/overdue-records`, `/inventory-status` |
 
-## Documentation
+## Verification
 
-- Frontend dashboard: `http://localhost:5000/dashboard`
-- Swagger UI: `http://localhost:5000/api-docs`
-- OpenAPI file: `docs/openapi.yaml`
-- Postman collection: `docs/postman_collection.json`
-- Architecture diagram: `docs/architecture.md`
+```bash
+npm run check
+```
 
-## Submission Checklist
-
-- Authentication and authorization module
-- Book catalog management APIs
-- Member management APIs
-- MongoDB database schema through Mongoose models
-- Borrow and return module
-- Overdue tracking and fine calculation
-- Notification module
-- Reporting and analytics APIs
-- Frontend dashboard for librarian and member workflows
-- Swagger and Postman documentation
-- Architecture diagram
+This checks every backend/frontend JavaScript file and verifies all 1,000 catalog records are unique and valid.

@@ -25,6 +25,33 @@ const bookSchema = new mongoose.Schema(
       ref: "Category",
       required: [true, "Category is required."]
     },
+    course: {
+      type: String,
+      default: "BTech CSE",
+      trim: true,
+      index: true
+    },
+    department: {
+      type: String,
+      default: "Computer Science and Engineering",
+      trim: true
+    },
+    semester: {
+      type: Number,
+      min: 1,
+      max: 8,
+      index: true
+    },
+    subjectCode: {
+      type: String,
+      uppercase: true,
+      trim: true,
+      index: true
+    },
+    edition: {
+      type: String,
+      trim: true
+    },
     publisher: {
       type: String,
       trim: true
@@ -54,7 +81,12 @@ const bookSchema = new mongoose.Schema(
     description: {
       type: String,
       trim: true
-    }
+    },
+    tags: [{
+      type: String,
+      trim: true,
+      lowercase: true
+    }]
   },
   {
     timestamps: true,
@@ -66,6 +98,15 @@ const bookSchema = new mongoose.Schema(
     }
   }
 );
+
+bookSchema.index({
+  title: "text",
+  author: "text",
+  isbn: "text",
+  subjectCode: "text",
+  tags: "text"
+});
+bookSchema.index({ category: 1, semester: 1, availableCopies: 1 });
 
 bookSchema.pre("validate", function setAvailableCopies(next) {
   if (this.availableCopies === undefined || this.availableCopies === null) {

@@ -1,60 +1,95 @@
 (function () {
+  const safeJsonParse = (value, fallback = null) => {
+    try {
+      return JSON.parse(value) || fallback;
+    } catch (error) {
+      return fallback;
+    }
+  };
+
+  const defaultApiBase = window.location.protocol !== "file:" && window.location.port === "5000"
+    ? window.location.origin
+    : "http://localhost:5000";
+
   const state = {
-    apiBase: localStorage.getItem("lmsApiBase") || "http://localhost:5000",
+    apiBase: localStorage.getItem("lmsApiBase") || defaultApiBase,
     token: localStorage.getItem("lmsToken") || "",
-    user: JSON.parse(localStorage.getItem("lmsUser") || "null"),
-    view: "books",
+    user: safeJsonParse(localStorage.getItem("lmsUser")),
+    view: "overview",
     categories: [],
-    books: []
+    catalog: {
+      page: 1,
+      limit: 24,
+      pages: 1,
+      total: 0
+    },
+    issueBookId: null,
+    loadingCount: 0
   };
 
-  const els = {
-    apiBaseInput: document.getElementById("apiBaseInput"),
-    authPanel: document.getElementById("authPanel"),
-    loginForm: document.getElementById("loginForm"),
-    logoutBtn: document.getElementById("logoutBtn"),
-    refreshBtn: document.getElementById("refreshBtn"),
-    sessionName: document.getElementById("sessionName"),
-    sessionRole: document.getElementById("sessionRole"),
-    toast: document.getElementById("toast"),
-    viewTitle: document.getElementById("viewTitle"),
-    booksList: document.getElementById("booksList"),
-    booksCount: document.getElementById("booksCount"),
-    bookSearchForm: document.getElementById("bookSearchForm"),
-    categoryForm: document.getElementById("categoryForm"),
-    bookForm: document.getElementById("bookForm"),
-    bookCategorySelect: document.getElementById("bookCategorySelect"),
-    historyList: document.getElementById("historyList"),
-    overdueList: document.getElementById("overdueList"),
-    membersList: document.getElementById("membersList"),
-    notificationsList: document.getElementById("notificationsList"),
-    inventoryReport: document.getElementById("inventoryReport"),
-    borrowedReport: document.getElementById("borrowedReport"),
-    activeMembersReport: document.getElementById("activeMembersReport"),
-    overdueReport: document.getElementById("overdueReport")
+  const $ = (selector, scope = document) => scope.querySelector(selector);
+  const $$ = (selector, scope = document) => Array.from(scope.querySelectorAll(selector));
+
+  const elements = {
+    authScreen: $("#authScreen"),
+    appShell: $("#appShell"),
+    authMessage: $("#authMessage"),
+    loginForm: $("#loginForm"),
+    signupForm: $("#signupForm"),
+    apiBaseInput: $("#apiBaseInput"),
+    toast: $("#toast"),
+    loadingBar: $("#loadingBar"),
+    sidebar: $(".sidebar"),
+    viewTitle: $("#viewTitle"),
+    viewKicker: $("#viewKicker"),
+    profileInitials: $("#profileInitials"),
+    profileName: $("#profileName"),
+    profileRole: $("#profileRole"),
+    notificationBadge: $("#notificationBadge"),
+    apiStatusDot: $("#apiStatusDot"),
+    apiStatusText: $("#apiStatusText"),
+    apiStatusDetail: $("#apiStatusDetail"),
+    overviewMetrics: $("#overviewMetrics"),
+    recommendedBooks: $("#recommendedBooks"),
+    overviewActivity: $("#overviewActivity"),
+    catalogFilterForm: $("#catalogFilterForm"),
+    catalogSearchInput: $("#catalogSearchInput"),
+    categoryFilter: $("#categoryFilter"),
+    catalogResultText: $("#catalogResultText"),
+    bookGrid: $("#bookGrid"),
+    pageStatus: $("#pageStatus"),
+    previousPageButton: $("#previousPageButton"),
+    nextPageButton: $("#nextPageButton"),
+    historyList: $("#historyList"),
+    notificationsList: $("#notificationsList"),
+    membersList: $("#membersList"),
+    reportMetrics: $("#reportMetrics"),
+    mostBorrowedReport: $("#mostBorrowedReport"),
+    activeMembersReport: $("#activeMembersReport"),
+    overdueReport: $("#overdueReport"),
+    bookDialog: $("#bookDialog"),
+    bookForm: $("#bookForm"),
+    bookCategorySelect: $("#bookCategorySelect"),
+    profileDialog: $("#profileDialog"),
+    profileForm: $("#profileForm"),
+    issueDialog: $("#issueDialog"),
+    issueForm: $("#issueForm"),
+    issueMemberSelect: $("#issueMemberSelect")
   };
 
-  const viewTitles = {
-    books: "Books",
-    borrow: "Borrow",
-    members: "Members",
-    notifications: "Notifications",
-    reports: "Reports"
+  const viewDetails = {
+    overview: { title: "Overview", kicker: "Library workspace" },
+    catalog: { title: "Catalog", kicker: "BTech CSE collection" },
+    activity: { title: "My books", kicker: "Borrowing activity" },
+    notifications: { title: "Notifications", kicker: "Library inbox" },
+    members: { title: "Members", kicker: "Library administration" },
+    reports: { title: "Reports", kicker: "Collection analytics" }
   };
 
   const demoAccounts = {
-    librarian: {
-      email: "librarian@example.com",
-      password: "Password@123"
-    },
-    member: {
-      email: "member@example.com",
-      password: "Password@123"
-    },
-    late: {
-      email: "late@example.com",
-      password: "Password@123"
-    }
+    librarian: { email: "librarian@example.com", password: "Password@123" },
+    member: { email: "member@example.com", password: "Password@123" },
+    late: { email: "late@example.com", password: "Password@123" }
   };
 
   const escapeHtml = (value) => String(value ?? "")
@@ -75,61 +110,85 @@
     }
 
     return date.toLocaleDateString(undefined, {
-      year: "numeric",
+      day: "2-digit",
       month: "short",
-      day: "numeric"
+      year: "numeric"
     });
   };
 
-  const formatRole = (role) => {
-    if (!role) {
-      return "Guest";
-    }
+  const titleCase = (value) => String(value || "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
-    return role.charAt(0).toUpperCase() + role.slice(1);
-  };
+  const getInitials = (name) => String(name || "Member")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
 
-  const isLibrarian = () => state.user && state.user.role === "librarian";
-  const isMember = () => state.user && state.user.role === "member";
+  const isLibrarian = () => state.user?.role === "librarian";
+  const isMember = () => state.user?.role === "member";
 
-  const showToast = (message) => {
-    els.toast.textContent = message;
-    els.toast.classList.add("is-visible");
-    window.clearTimeout(showToast.timer);
-    showToast.timer = window.setTimeout(() => {
-      els.toast.classList.remove("is-visible");
-    }, 3500);
-  };
-
-  const setLoading = (target, message) => {
-    target.innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
-  };
-
-  const setEmpty = (target, message) => {
-    target.innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
-  };
-
-  const getFormValues = (form) => {
-    const data = {};
+  const getFormData = (form) => {
+    const values = {};
     const formData = new FormData(form);
 
-    for (const [key, value] of formData.entries()) {
-      if (value === "") {
-        continue;
+    formData.forEach((value, key) => {
+      if (value !== "") {
+        values[key] = typeof value === "string" ? value.trim() : value;
       }
+    });
 
-      data[key] = value;
-    }
-
-    return data;
+    return values;
   };
 
-  const saveSession = ({ token, user }) => {
+  const buildQuery = (params) => {
+    const query = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== "" && value !== null && value !== undefined) {
+        query.set(key, value);
+      }
+    });
+
+    return query.toString() ? `?${query.toString()}` : "";
+  };
+
+  const showToast = (message, type = "success") => {
+    elements.toast.textContent = message;
+    elements.toast.className = `toast is-visible ${type}`;
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => {
+      elements.toast.className = "toast";
+    }, 3800);
+  };
+
+  const setAuthMessage = (message = "", type = "error") => {
+    elements.authMessage.textContent = message;
+    elements.authMessage.className = `form-message ${type === "success" ? "success" : ""}`;
+  };
+
+  const beginLoading = () => {
+    state.loadingCount += 1;
+    elements.loadingBar.className = "loading-bar is-loading";
+  };
+
+  const endLoading = () => {
+    state.loadingCount = Math.max(0, state.loadingCount - 1);
+
+    if (state.loadingCount === 0) {
+      elements.loadingBar.className = "loading-bar is-complete";
+      window.setTimeout(() => {
+        elements.loadingBar.className = "loading-bar";
+      }, 220);
+    }
+  };
+
+  const saveSession = (token, user) => {
     state.token = token;
     state.user = user;
     localStorage.setItem("lmsToken", token);
     localStorage.setItem("lmsUser", JSON.stringify(user));
-    renderSession();
   };
 
   const clearSession = () => {
@@ -137,632 +196,759 @@
     state.user = null;
     localStorage.removeItem("lmsToken");
     localStorage.removeItem("lmsUser");
-    renderSession();
   };
 
-  const normalizeApiBase = () => {
-    state.apiBase = els.apiBaseInput.value.trim().replace(/\/$/, "");
+  const setApiBase = () => {
+    state.apiBase = elements.apiBaseInput.value.trim().replace(/\/$/, "") || defaultApiBase;
+    elements.apiBaseInput.value = state.apiBase;
     localStorage.setItem("lmsApiBase", state.apiBase);
-    return state.apiBase;
   };
 
   const api = async (path, options = {}) => {
-    const headers = {
-      ...(options.headers || {})
-    };
+    beginLoading();
 
-    if (state.token) {
-      headers.Authorization = `Bearer ${state.token}`;
-    }
+    try {
+      const headers = { ...(options.headers || {}) };
 
-    if (options.body && !(options.body instanceof FormData)) {
-      headers["Content-Type"] = "application/json";
-    }
-
-    const response = await fetch(`${normalizeApiBase()}${path}`, {
-      ...options,
-      headers,
-      body: options.body && !(options.body instanceof FormData)
-        ? JSON.stringify(options.body)
-        : options.body
-    });
-
-    if (response.status === 204) {
-      return null;
-    }
-
-    const json = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      throw new Error(json.message || `Request failed with status ${response.status}`);
-    }
-
-    return json;
-  };
-
-  const renderSession = () => {
-    els.sessionName.textContent = state.user ? state.user.name : "Not logged in";
-    els.sessionRole.textContent = state.user
-      ? `${formatRole(state.user.role)} - ${state.user.email}`
-      : "Use demo credentials";
-    els.authPanel.classList.toggle("is-hidden", Boolean(state.user));
-    els.logoutBtn.style.display = state.user ? "inline-flex" : "none";
-
-    document.querySelectorAll(".librarian-only").forEach((node) => {
-      node.classList.toggle("is-hidden", !isLibrarian());
-    });
-
-    document.querySelectorAll("[data-view='members'], [data-view='reports']").forEach((node) => {
-      node.style.display = isLibrarian() ? "block" : "none";
-    });
-
-    if (!isLibrarian() && (state.view === "members" || state.view === "reports")) {
-      switchView("books");
-    }
-  };
-
-  const switchView = (view) => {
-    state.view = view;
-    els.viewTitle.textContent = viewTitles[view] || "Dashboard";
-
-    document.querySelectorAll(".view").forEach((node) => {
-      node.classList.toggle("is-visible", node.id === `${view}View`);
-    });
-
-    document.querySelectorAll(".nav-item").forEach((node) => {
-      node.classList.toggle("is-active", node.dataset.view === view);
-    });
-
-    refreshCurrentView();
-  };
-
-  const buildQuery = (params) => {
-    const search = new URLSearchParams();
-
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        search.set(key, value);
+      if (state.token) {
+        headers.Authorization = `Bearer ${state.token}`;
       }
+
+      if (options.body !== undefined) {
+        headers["Content-Type"] = "application/json";
+      }
+
+      let response;
+      try {
+        response = await fetch(`${state.apiBase}${path}`, {
+          ...options,
+          headers,
+          body: options.body !== undefined ? JSON.stringify(options.body) : undefined
+        });
+      } catch (error) {
+        throw new Error(`Cannot reach the API at ${state.apiBase}.`);
+      }
+
+      if (response.status === 204) {
+        return null;
+      }
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (response.status === 401 && state.token) {
+          clearSession();
+          showAuth("login");
+        }
+
+        throw new Error(payload.message || `Request failed with status ${response.status}.`);
+      }
+
+      return payload;
+    } finally {
+      endLoading();
+    }
+  };
+
+  const emptyState = (title, detail) => `
+    <div class="empty-state">
+      <div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span></div>
+    </div>
+  `;
+
+  const loadingState = () => "<div class=\"loading-state\"></div>";
+
+  const showAuth = (mode = "login") => {
+    elements.authScreen.classList.remove("is-hidden");
+    elements.appShell.classList.add("is-hidden");
+    switchAuthMode(mode);
+  };
+
+  const switchAuthMode = (mode) => {
+    const loginMode = mode === "login";
+    elements.loginForm.classList.toggle("is-hidden", !loginMode);
+    elements.signupForm.classList.toggle("is-hidden", loginMode);
+    setAuthMessage();
+
+    $$("[data-auth-mode]").forEach((button) => {
+      const active = button.dataset.authMode === mode;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+  };
+
+  const renderRoleVisibility = () => {
+    $$(".librarian-only").forEach((element) => {
+      element.classList.toggle("is-hidden", !isLibrarian());
+    });
+    $$(".member-only").forEach((element) => {
+      element.classList.toggle("is-hidden", !isMember());
+    });
+  };
+
+  const renderProfile = () => {
+    elements.profileInitials.textContent = getInitials(state.user?.name);
+    elements.profileName.textContent = state.user?.name || "Member";
+    elements.profileRole.textContent = isLibrarian()
+      ? "Librarian"
+      : `Semester ${state.user?.semester || "-"} student`;
+  };
+
+  const enterApp = async () => {
+    elements.authScreen.classList.add("is-hidden");
+    elements.appShell.classList.remove("is-hidden");
+    renderRoleVisibility();
+    renderProfile();
+    await Promise.allSettled([
+      checkHealth(),
+      loadCategories(),
+      updateNotificationBadge()
+    ]);
+    await switchView("overview");
+  };
+
+  const checkHealth = async () => {
+    try {
+      const result = await api("/health");
+      elements.apiStatusDot.className = "online";
+      elements.apiStatusText.textContent = "API online";
+      elements.apiStatusDetail.textContent = new Date(result.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } catch (error) {
+      elements.apiStatusDot.className = "offline";
+      elements.apiStatusText.textContent = "API offline";
+      elements.apiStatusDetail.textContent = state.apiBase;
+    }
+  };
+
+  const switchView = async (view) => {
+    if ((view === "members" || view === "reports") && !isLibrarian()) {
+      view = "overview";
+    }
+
+    state.view = view;
+    const details = viewDetails[view];
+    elements.viewTitle.textContent = details.title;
+    elements.viewKicker.textContent = details.kicker;
+
+    $$(".view").forEach((section) => {
+      section.classList.toggle("is-visible", section.id === `${view}View`);
+    });
+    $$(".nav-button").forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.view === view);
     });
 
-    const query = search.toString();
-    return query ? `?${query}` : "";
+    elements.sidebar.classList.remove("is-open");
+    await loadCurrentView();
+  };
+
+  const loadCurrentView = async () => {
+    try {
+      if (state.view === "overview") {
+        await loadOverview();
+      } else if (state.view === "catalog") {
+        await loadCatalog();
+      } else if (state.view === "activity") {
+        await loadHistory();
+      } else if (state.view === "notifications") {
+        await loadNotifications();
+      } else if (state.view === "members") {
+        await loadMembers();
+      } else if (state.view === "reports") {
+        await loadReports();
+      }
+    } catch (error) {
+      showToast(error.message, "error");
+    }
   };
 
   const loadCategories = async () => {
-    const json = await api("/api/v1/categories");
-    state.categories = json.data.categories || [];
-    renderCategorySelect();
+    const payload = await api("/api/v1/categories");
+    state.categories = payload.data.categories || [];
+
+    const options = state.categories.map((category) => (
+      `<option value="${escapeHtml(category._id)}">${escapeHtml(category.name)}</option>`
+    )).join("");
+
+    elements.categoryFilter.innerHTML = `<option value="">All subjects</option>${options}`;
+    elements.bookCategorySelect.innerHTML = `<option value="">Select subject</option>${options}`;
   };
 
-  const renderCategorySelect = () => {
-    if (!state.categories.length) {
-      els.bookCategorySelect.innerHTML = "<option value=\"\">Create a category first</option>";
+  const loadOverview = async () => {
+    elements.overviewMetrics.innerHTML = loadingState();
+    elements.recommendedBooks.innerHTML = loadingState();
+    elements.overviewActivity.innerHTML = loadingState();
+
+    const semester = isMember() && state.user.semester ? state.user.semester : 5;
+    $("#welcomeTitle").textContent = `Good to see you, ${String(state.user.name).split(" ")[0]}.`;
+    $("#welcomeText").textContent = isLibrarian()
+      ? "The CSE collection and member desk are ready."
+      : `Your semester ${semester} reading list is ready.`;
+    $("#recommendationTitle").textContent = isLibrarian() ? "Recently added" : `Semester ${semester} picks`;
+
+    const [allBooks, availableBooks, history, recommendations] = await Promise.all([
+      api("/api/v1/books?limit=1"),
+      api("/api/v1/books?limit=1&availability=available"),
+      api("/api/v1/borrows/history?limit=5&sort=-createdAt"),
+      api(`/api/v1/books?limit=4&availability=available&sort=-publishedYear${isLibrarian() ? "" : `&semester=${semester}`}`)
+    ]);
+
+    const records = history.data.records || [];
+    const activeLoans = records.filter((record) => record.status !== "returned").length;
+    const overdueLoans = records.filter((record) => record.status === "overdue").length;
+
+    renderMetrics(elements.overviewMetrics, [
+      { value: allBooks.pagination.total, label: "Catalog titles", note: "BTech CSE collection" },
+      { value: availableBooks.pagination.total, label: "Available titles", note: "Ready to issue" },
+      { value: state.categories.length, label: "Subject areas", note: "Across 8 semesters" },
+      { value: activeLoans, label: isLibrarian() ? "Recent active loans" : "Your active loans", note: `${overdueLoans} overdue` }
+    ]);
+
+    renderCompactBooks(recommendations.data.books || []);
+    renderOverviewActivity(records);
+  };
+
+  const renderMetrics = (target, metrics) => {
+    target.innerHTML = metrics.map((metric) => `
+      <div class="metric-item">
+        <strong>${escapeHtml(metric.value ?? 0)}</strong>
+        <span>${escapeHtml(metric.label)}</span>
+        <em>${escapeHtml(metric.note || "")}</em>
+      </div>
+    `).join("");
+  };
+
+  const renderCompactBooks = (books) => {
+    if (!books.length) {
+      elements.recommendedBooks.innerHTML = emptyState("No recommendations", "Seed the catalog to see CSE titles here.");
       return;
     }
 
-    els.bookCategorySelect.innerHTML = state.categories.map((category) => (
-      `<option value="${escapeHtml(category._id)}">${escapeHtml(category.name)}</option>`
-    )).join("");
+    elements.recommendedBooks.innerHTML = books.map((book) => `
+      <article class="compact-book">
+        <span class="mini-cover cover-semester-${escapeHtml(book.semester || 1)}">${escapeHtml(book.subjectCode || "CSE")}</span>
+        <div><h3>${escapeHtml(book.title)}</h3><p>${escapeHtml(book.author)} - ${escapeHtml(book.availableCopies)} available</p></div>
+        <button class="text-button" type="button" data-action="open-book" data-id="${escapeHtml(book._id)}">View</button>
+      </article>
+    `).join("");
   };
 
-  const loadBooks = async (params = {}) => {
-    setLoading(els.booksList, "Loading books...");
-    await loadCategories();
-    const json = await api(`/api/v1/books${buildQuery(params)}`);
-    state.books = json.data.books || [];
-    renderBooks(state.books);
+  const renderOverviewActivity = (records) => {
+    if (!records.length) {
+      elements.overviewActivity.innerHTML = emptyState("No loan activity", "Borrowed and returned books appear here.");
+      return;
+    }
+
+    elements.overviewActivity.innerHTML = records.slice(0, 5).map((record) => `
+      <article class="activity-row">
+        <div><h3>${escapeHtml(record.book?.title || "Unknown book")}</h3><p>Due ${escapeHtml(formatDate(record.dueDate))}</p></div>
+        <span class="status-pill ${escapeHtml(record.status)}">${escapeHtml(record.status)}</span>
+      </article>
+    `).join("");
+  };
+
+  const getCatalogFilters = () => {
+    const filters = getFormData(elements.catalogFilterForm);
+    return {
+      ...filters,
+      page: state.catalog.page,
+      limit: state.catalog.limit
+    };
+  };
+
+  const loadCatalog = async () => {
+    elements.bookGrid.innerHTML = loadingState();
+
+    if (!state.categories.length) {
+      await loadCategories();
+    }
+
+    const payload = await api(`/api/v1/books${buildQuery(getCatalogFilters())}`);
+    state.catalog.total = payload.pagination.total;
+    state.catalog.pages = Math.max(1, payload.pagination.pages);
+    state.catalog.page = payload.pagination.page;
+
+    renderBooks(payload.data.books || []);
+    elements.catalogResultText.textContent = `${state.catalog.total.toLocaleString()} titles found`;
+    elements.pageStatus.textContent = `Page ${state.catalog.page} of ${state.catalog.pages}`;
+    elements.previousPageButton.disabled = state.catalog.page <= 1;
+    elements.nextPageButton.disabled = state.catalog.page >= state.catalog.pages;
   };
 
   const renderBooks = (books) => {
-    els.booksCount.textContent = books.length;
-
     if (!books.length) {
-      setEmpty(els.booksList, "No books found.");
+      elements.bookGrid.innerHTML = emptyState("No books match", "Change the subject, semester, or search terms.");
       return;
     }
 
-    els.booksList.innerHTML = books.map((book) => {
-      const availabilityClass = book.availableCopies > 0 ? "ok" : "danger";
-      const availabilityText = book.availableCopies > 0 ? "Available" : "Unavailable";
-      const categoryName = book.category && book.category.name ? book.category.name : "Uncategorized";
-      const borrowButton = state.user && book.availableCopies > 0
-        ? `<button class="secondary-button" type="button" data-action="borrow-book" data-id="${escapeHtml(book._id)}">Borrow</button>`
-        : "";
-      const deleteButton = isLibrarian()
-        ? `<button class="danger-button" type="button" data-action="delete-book" data-id="${escapeHtml(book._id)}">Delete</button>`
+    elements.bookGrid.innerHTML = books.map((book) => {
+      const available = book.availableCopies > 0;
+      const memberAction = isMember()
+        ? `<button class="button button-primary" type="button" data-action="borrow-book" data-id="${escapeHtml(book._id)}" ${available ? "" : "disabled"}>Borrow</button>`
+        : `<button class="button button-secondary" type="button" data-action="issue-book" data-id="${escapeHtml(book._id)}" ${available ? "" : "disabled"}>Issue</button>`;
+      const deleteAction = isLibrarian()
+        ? `<button class="button button-danger" type="button" data-action="delete-book" data-id="${escapeHtml(book._id)}">Delete</button>`
         : "";
 
       return `
-        <article class="data-item">
-          <div class="data-item-header">
-            <div>
-              <h4>${escapeHtml(book.title)}</h4>
-              <p>${escapeHtml(book.author)} - ISBN ${escapeHtml(book.isbn)}</p>
+        <article class="book-card">
+          <div class="book-cover cover-semester-${escapeHtml(book.semester || 1)}">
+            <span class="cover-code">${escapeHtml(book.subjectCode || "CSE")}</span>
+            <span class="cover-semester">Semester ${escapeHtml(book.semester || "-")}</span>
+          </div>
+          <div class="book-card-body">
+            <h3 title="${escapeHtml(book.title)}">${escapeHtml(book.title)}</h3>
+            <p>${escapeHtml(book.author)}</p>
+            <div class="book-meta">
+              <span class="chip">${escapeHtml(book.edition || "Reference")}</span>
+              <span class="status-pill ${available ? "available" : "unavailable"}">${available ? `${book.availableCopies} available` : "Checked out"}</span>
             </div>
-            <span class="pill ${availabilityClass}">${availabilityText}</span>
+            <p>${escapeHtml(book.publisher || "Academic Press")} - ${escapeHtml(book.publishedYear || "-")}</p>
           </div>
-          <div class="meta-row">
-            <span class="pill">${escapeHtml(categoryName)}</span>
-            <span class="pill">${escapeHtml(book.availableCopies)} of ${escapeHtml(book.totalCopies)} copies</span>
-            <span class="pill">Shelf ${escapeHtml(book.shelfLocation || "N/A")}</span>
-          </div>
-          <div class="item-actions">
-            ${borrowButton}
-            ${deleteButton}
-          </div>
+          <div class="book-card-actions">${memberAction}${deleteAction}</div>
         </article>
       `;
     }).join("");
   };
 
-  const borrowBook = async (bookId) => {
-    if (!state.user) {
-      showToast("Login before borrowing a book.");
+  const borrowBook = async (bookId, memberId) => {
+    const body = memberId ? { memberId } : {};
+    await api(`/api/v1/borrows/${bookId}`, { method: "POST", body });
+    showToast(memberId ? "Book issued to member." : "Book borrowed successfully.");
+    await Promise.all([loadCatalog(), updateNotificationBadge()]);
+  };
+
+  const openIssueDialog = async (bookId) => {
+    const payload = await api("/api/v1/members?limit=100&membershipStatus=active&sort=name");
+    const members = payload.data.members || [];
+
+    if (!members.length) {
+      showToast("No active members are available.", "error");
       return;
     }
 
-    const body = {};
+    state.issueBookId = bookId;
+    elements.issueMemberSelect.innerHTML = `<option value="">Select member</option>${members.map((member) => (
+      `<option value="${escapeHtml(member._id)}">${escapeHtml(member.name)} - ${escapeHtml(member.studentId || member.email)}</option>`
+    )).join("")}`;
+    elements.issueForm.reset();
+    elements.issueDialog.showModal();
+  };
 
-    if (isLibrarian()) {
-      const memberId = window.prompt("Enter member ID for this issue:");
-
-      if (!memberId) {
-        return;
-      }
-
-      body.memberId = memberId.trim();
-    }
-
-    await api(`/api/v1/borrows/${bookId}`, {
-      method: "POST",
-      body
-    });
-
-    showToast("Book borrowed successfully.");
-    await loadBooks(getFormValues(els.bookSearchForm));
+  const submitIssue = async () => {
+    const body = getFormData(elements.issueForm);
+    await api(`/api/v1/borrows/${state.issueBookId}`, { method: "POST", body });
+    elements.issueDialog.close();
+    state.issueBookId = null;
+    showToast("Book issued to member.");
+    await loadCatalog();
   };
 
   const deleteBook = async (bookId) => {
-    if (!window.confirm("Delete this book from catalog?")) {
+    if (!window.confirm("Delete this book from the catalog?")) {
       return;
     }
 
-    await api(`/api/v1/books/${bookId}`, {
-      method: "DELETE"
-    });
-
+    await api(`/api/v1/books/${bookId}`, { method: "DELETE" });
     showToast("Book deleted.");
-    await loadBooks(getFormValues(els.bookSearchForm));
+    await loadCatalog();
+  };
+
+  const openBookInCatalog = async (bookId) => {
+    await switchView("catalog");
+    const payload = await api(`/api/v1/books/${bookId}`);
+    elements.catalogSearchInput.value = payload.data.book.title;
+    state.catalog.page = 1;
+    await loadCatalog();
   };
 
   const loadHistory = async () => {
-    if (!state.user) {
-      setEmpty(els.historyList, "Login to view borrowing history.");
-      return;
-    }
+    elements.historyList.innerHTML = loadingState();
+    const status = $("#historyStatusFilter").value;
+    const payload = await api(`/api/v1/borrows/history${buildQuery({ limit: 100, sort: "-createdAt", status })}`);
+    const records = payload.data.records || [];
 
-    setLoading(els.historyList, "Loading history...");
-    const json = await api("/api/v1/borrows/history");
-    renderHistory(json.data.records || []);
-  };
-
-  const renderHistory = (records) => {
     if (!records.length) {
-      setEmpty(els.historyList, "No borrowing records yet.");
+      elements.historyList.innerHTML = emptyState("No loan records", "Borrowed, overdue, and returned books appear here.");
       return;
     }
 
-    els.historyList.innerHTML = records.map((record) => {
-      const statusClass = record.status === "returned"
-        ? "ok"
-        : record.status === "overdue"
-          ? "danger"
-          : "warn";
-      const bookTitle = record.book && record.book.title ? record.book.title : "Unknown book";
-      const memberName = record.member && record.member.name ? record.member.name : "Member";
-      const returnButton = record.status !== "returned"
-        ? `<button class="secondary-button" type="button" data-action="return-book" data-id="${escapeHtml(record._id)}">Return</button>`
-        : "";
-
-      return `
-        <article class="data-item">
-          <div class="data-item-header">
-            <div>
-              <h4>${escapeHtml(bookTitle)}</h4>
-              <p>${escapeHtml(memberName)}</p>
-            </div>
-            <span class="pill ${statusClass}">${escapeHtml(record.status)}</span>
-          </div>
-          <div class="meta-row">
-            <span class="pill">Due ${escapeHtml(formatDate(record.dueDate))}</span>
-            <span class="pill">Returned ${escapeHtml(formatDate(record.returnDate))}</span>
-            <span class="pill">Fine ${escapeHtml(record.fine || 0)}</span>
-          </div>
-          <div class="item-actions">${returnButton}</div>
-        </article>
-      `;
-    }).join("");
+    elements.historyList.innerHTML = records.map((record) => `
+      <article class="table-row">
+        <div><h3>${escapeHtml(record.book?.title || "Unknown book")}</h3><p>${escapeHtml(record.book?.author || "")} ${isLibrarian() ? `- ${escapeHtml(record.member?.name || "Member")}` : ""}</p></div>
+        <div><p>Issued</p><h3>${escapeHtml(formatDate(record.issueDate))}</h3></div>
+        <div><p>Due</p><h3>${escapeHtml(formatDate(record.dueDate))}</h3></div>
+        <div class="row-actions"><span class="status-pill ${escapeHtml(record.status)}">${escapeHtml(record.status)}</span>${record.status !== "returned" ? `<button class="button button-secondary" type="button" data-action="return-book" data-id="${escapeHtml(record._id)}">Return</button>` : ""}</div>
+      </article>
+    `).join("");
   };
 
   const returnBook = async (recordId) => {
-    await api(`/api/v1/borrows/return/${recordId}`, {
-      method: "PATCH",
-      body: {}
-    });
-
+    await api(`/api/v1/borrows/return/${recordId}`, { method: "PATCH", body: {} });
     showToast("Book returned successfully.");
-    await loadHistory();
+    await Promise.all([loadHistory(), updateNotificationBadge()]);
+  };
 
-    if (isLibrarian()) {
-      await loadOverdue();
+  const updateNotificationBadge = async () => {
+    if (!state.token) {
+      return;
+    }
+
+    try {
+      const payload = await api("/api/v1/notifications?limit=100&isRead=false");
+      const count = payload.pagination.total;
+      elements.notificationBadge.textContent = count > 99 ? "99+" : count;
+      elements.notificationBadge.classList.toggle("is-hidden", count === 0);
+    } catch (error) {
+      elements.notificationBadge.classList.add("is-hidden");
     }
   };
 
-  const loadOverdue = async () => {
-    if (!isLibrarian()) {
-      setEmpty(els.overdueList, "Overdue records are available to librarians.");
+  const loadNotifications = async () => {
+    elements.notificationsList.innerHTML = loadingState();
+    const isRead = $("#notificationFilter").value;
+    const payload = await api(`/api/v1/notifications${buildQuery({ limit: 100, isRead })}`);
+    const notifications = payload.data.notifications || [];
+
+    if (!notifications.length) {
+      elements.notificationsList.innerHTML = emptyState("No notifications", "Borrow confirmations, reminders, and overdue alerts appear here.");
       return;
     }
 
-    setLoading(els.overdueList, "Loading overdue records...");
-    const json = await api("/api/v1/borrows/overdue");
-    const records = json.data.records || [];
+    elements.notificationsList.innerHTML = notifications.map((notification) => `
+      <article class="notification-row ${notification.isRead ? "" : "unread"}">
+        <span class="notification-dot"></span>
+        <div><h3>${escapeHtml(notification.title)}</h3><p>${escapeHtml(notification.message)} - ${escapeHtml(formatDate(notification.createdAt))}</p></div>
+        ${notification.isRead ? `<span class="status-pill read">Read</span>` : `<button class="button button-secondary" type="button" data-action="read-notification" data-id="${escapeHtml(notification._id)}">Mark read</button>`}
+      </article>
+    `).join("");
+  };
 
-    if (!records.length) {
-      setEmpty(els.overdueList, "No overdue records.");
-      return;
-    }
-
-    els.overdueList.innerHTML = records.map((record) => {
-      const bookTitle = record.book && record.book.title ? record.book.title : "Unknown book";
-      const memberName = record.member && record.member.name ? record.member.name : "Member";
-
-      return `
-        <article class="data-item">
-          <div class="data-item-header">
-            <div>
-              <h4>${escapeHtml(bookTitle)}</h4>
-              <p>${escapeHtml(memberName)} - ${escapeHtml(record.member.email || "")}</p>
-            </div>
-            <span class="pill danger">Overdue</span>
-          </div>
-          <div class="meta-row">
-            <span class="pill">Due ${escapeHtml(formatDate(record.dueDate))}</span>
-            <span class="pill">Fine ${escapeHtml(record.fine || 0)}</span>
-          </div>
-        </article>
-      `;
-    }).join("");
+  const markNotificationRead = async (notificationId) => {
+    await api(`/api/v1/notifications/${notificationId}/read`, { method: "PATCH" });
+    await Promise.all([loadNotifications(), updateNotificationBadge()]);
   };
 
   const loadMembers = async () => {
-    if (!isLibrarian()) {
-      setEmpty(els.membersList, "Members are available to librarians.");
-      return;
-    }
-
-    setLoading(els.membersList, "Loading members...");
-    const json = await api("/api/v1/members");
-    const members = json.data.members || [];
+    elements.membersList.innerHTML = loadingState();
+    const search = $("#memberSearchInput").value.trim();
+    const membershipStatus = $("#memberStatusFilter").value;
+    const payload = await api(`/api/v1/members${buildQuery({ limit: 100, search, membershipStatus, sort: "name" })}`);
+    const members = payload.data.members || [];
 
     if (!members.length) {
-      setEmpty(els.membersList, "No members found.");
+      elements.membersList.innerHTML = emptyState("No members found", "Change the search or status filter.");
       return;
     }
 
-    els.membersList.innerHTML = members.map((member) => `
-      <article class="data-item">
-        <div class="data-item-header">
-          <div>
-            <h4>${escapeHtml(member.name)}</h4>
-            <p>${escapeHtml(member.email)} - ${escapeHtml(member.phone || "No phone")}</p>
-          </div>
-          <span class="pill ${member.membershipStatus === "active" ? "ok" : "warn"}">${escapeHtml(member.membershipStatus)}</span>
-        </div>
-        <div class="form-row">
-          <label>
-            <span>Status</span>
-            <select data-member-status="${escapeHtml(member._id)}">
-              <option value="active" ${member.membershipStatus === "active" ? "selected" : ""}>active</option>
-              <option value="suspended" ${member.membershipStatus === "suspended" ? "selected" : ""}>suspended</option>
-              <option value="expired" ${member.membershipStatus === "expired" ? "selected" : ""}>expired</option>
-            </select>
-          </label>
-          <label>
-            <span>Borrow Limit</span>
-            <input data-member-limit="${escapeHtml(member._id)}" type="number" min="1" max="20" value="${escapeHtml(member.borrowLimit || 5)}">
-          </label>
-          <button class="secondary-button" type="button" data-action="save-member" data-id="${escapeHtml(member._id)}">Save</button>
+    elements.membersList.innerHTML = members.map((member) => `
+      <article class="table-row">
+        <div><h3>${escapeHtml(member.name)}</h3><p>${escapeHtml(member.email)} - ${escapeHtml(member.studentId || "No student ID")}</p></div>
+        <div><p>Semester</p><h3>${escapeHtml(member.semester || "-")}</h3></div>
+        <div><p>Joined</p><h3>${escapeHtml(formatDate(member.createdAt))}</h3></div>
+        <div class="member-controls">
+          <select data-member-status="${escapeHtml(member._id)}"><option value="active" ${member.membershipStatus === "active" ? "selected" : ""}>Active</option><option value="suspended" ${member.membershipStatus === "suspended" ? "selected" : ""}>Suspended</option><option value="expired" ${member.membershipStatus === "expired" ? "selected" : ""}>Expired</option></select>
+          <input data-member-limit="${escapeHtml(member._id)}" type="number" min="1" max="20" value="${escapeHtml(member.borrowLimit || 5)}" aria-label="Borrow limit">
+          <button class="button button-secondary" type="button" data-action="save-member" data-id="${escapeHtml(member._id)}">Save</button>
         </div>
       </article>
     `).join("");
   };
 
   const saveMember = async (memberId) => {
-    const status = document.querySelector(`[data-member-status="${memberId}"]`).value;
-    const limit = Number(document.querySelector(`[data-member-limit="${memberId}"]`).value);
-
+    const membershipStatus = $(`[data-member-status="${memberId}"]`).value;
+    const borrowLimit = Number($(`[data-member-limit="${memberId}"]`).value);
     await api(`/api/v1/members/${memberId}/status`, {
       method: "PATCH",
-      body: {
-        membershipStatus: status,
-        borrowLimit: limit
-      }
+      body: { membershipStatus, borrowLimit }
     });
-
-    showToast("Member updated.");
+    showToast("Member account updated.");
     await loadMembers();
   };
 
-  const loadNotifications = async () => {
-    if (!state.user) {
-      setEmpty(els.notificationsList, "Login to view notifications.");
-      return;
-    }
-
-    setLoading(els.notificationsList, "Loading notifications...");
-    const json = await api("/api/v1/notifications");
-    const notifications = json.data.notifications || [];
-
-    if (!notifications.length) {
-      setEmpty(els.notificationsList, "No notifications.");
-      return;
-    }
-
-    els.notificationsList.innerHTML = notifications.map((notification) => `
-      <article class="data-item">
-        <div class="data-item-header">
-          <div>
-            <h4>${escapeHtml(notification.title)}</h4>
-            <p>${escapeHtml(notification.message)}</p>
-          </div>
-          <span class="pill ${notification.isRead ? "ok" : "warn"}">${notification.isRead ? "Read" : "Unread"}</span>
-        </div>
-        <div class="meta-row">
-          <span class="pill">${escapeHtml(notification.type)}</span>
-          <span class="pill">${escapeHtml(formatDate(notification.createdAt))}</span>
-        </div>
-        <div class="item-actions">
-          ${notification.isRead ? "" : `<button class="secondary-button" type="button" data-action="read-notification" data-id="${escapeHtml(notification._id)}">Mark Read</button>`}
-        </div>
-      </article>
-    `).join("");
-  };
-
-  const markNotificationRead = async (notificationId) => {
-    await api(`/api/v1/notifications/${notificationId}/read`, {
-      method: "PATCH"
-    });
-    showToast("Notification marked read.");
-    await loadNotifications();
-  };
-
   const loadReports = async () => {
-    if (!isLibrarian()) {
-      setEmpty(els.inventoryReport, "Reports are available to librarians.");
-      setEmpty(els.borrowedReport, "Reports are available to librarians.");
-      setEmpty(els.activeMembersReport, "Reports are available to librarians.");
-      setEmpty(els.overdueReport, "Reports are available to librarians.");
-      return;
-    }
+    elements.reportMetrics.innerHTML = loadingState();
+    elements.mostBorrowedReport.innerHTML = loadingState();
+    elements.activeMembersReport.innerHTML = loadingState();
+    elements.overdueReport.innerHTML = loadingState();
 
-    setLoading(els.inventoryReport, "Loading inventory...");
-    setLoading(els.borrowedReport, "Loading borrowed books...");
-    setLoading(els.activeMembersReport, "Loading active members...");
-    setLoading(els.overdueReport, "Loading overdue report...");
-
-    const [inventory, mostBorrowed, activeMembers, overdue] = await Promise.all([
+    const [inventory, borrowed, members, overdue] = await Promise.all([
       api("/api/v1/reports/inventory-status"),
       api("/api/v1/reports/most-borrowed-books"),
       api("/api/v1/reports/active-members"),
       api("/api/v1/reports/overdue-records")
     ]);
 
-    renderInventoryReport(inventory.data.summary);
-    renderSimpleReport(
-      els.borrowedReport,
-      mostBorrowed.data.books || [],
-      (book) => `${book.title} - ${book.author}`,
-      (book) => `${book.borrowCount} borrows`
-    );
-    renderSimpleReport(
-      els.activeMembersReport,
-      activeMembers.data.members || [],
-      (member) => `${member.name} - ${member.email}`,
-      (member) => `${member.totalBorrows || 0} total, ${member.activeBorrows || 0} active`
-    );
-    renderSimpleReport(
-      els.overdueReport,
-      overdue.data.records || [],
-      (record) => record.book && record.book.title ? record.book.title : "Unknown book",
-      (record) => `${record.member && record.member.name ? record.member.name : "Member"} - due ${formatDate(record.dueDate)}`
-    );
+    const summary = inventory.data.summary;
+    renderMetrics(elements.reportMetrics, [
+      { value: summary.totalTitles, label: "Titles", note: "Catalog size" },
+      { value: summary.totalCopies, label: "Physical copies", note: "All inventory" },
+      { value: summary.availableCopies, label: "Available copies", note: "On shelf" },
+      { value: summary.borrowedCopies, label: "Borrowed copies", note: `${overdue.results || 0} overdue` }
+    ]);
+    renderRankList(elements.mostBorrowedReport, borrowed.data.books || [], (item) => item.title, (item) => `${item.borrowCount} borrows`);
+    renderRankList(elements.activeMembersReport, members.data.members || [], (item) => item.name, (item) => `${item.totalBorrows || 0} total - ${item.activeBorrows || 0} active`);
+    renderOverdueReport(overdue.data.records || []);
   };
 
-  const renderInventoryReport = (summary) => {
-    const safeSummary = summary || {
-      totalTitles: 0,
-      totalCopies: 0,
-      availableCopies: 0,
-      borrowedCopies: 0
-    };
-
-    els.inventoryReport.innerHTML = `
-      <div class="metric"><strong>${escapeHtml(safeSummary.totalTitles)}</strong><span>Titles</span></div>
-      <div class="metric"><strong>${escapeHtml(safeSummary.totalCopies)}</strong><span>Total copies</span></div>
-      <div class="metric"><strong>${escapeHtml(safeSummary.availableCopies)}</strong><span>Available</span></div>
-      <div class="metric"><strong>${escapeHtml(safeSummary.borrowedCopies)}</strong><span>Borrowed</span></div>
-    `;
-  };
-
-  const renderSimpleReport = (target, rows, titleFn, metaFn) => {
+  const renderRankList = (target, rows, titleFn, detailFn) => {
     if (!rows.length) {
-      setEmpty(target, "No report data yet.");
+      target.innerHTML = emptyState("No report data", "Borrowing activity will populate this report.");
       return;
     }
 
-    target.innerHTML = rows.map((row) => `
-      <article class="data-item">
-        <div>
-          <h4>${escapeHtml(titleFn(row))}</h4>
-          <p>${escapeHtml(metaFn(row))}</p>
-        </div>
-      </article>
+    target.innerHTML = rows.slice(0, 10).map((row, index) => `
+      <article class="rank-row"><span class="rank-number">${index + 1}</span><div><h3>${escapeHtml(titleFn(row))}</h3><p>${escapeHtml(detailFn(row))}</p></div></article>
     `).join("");
   };
 
-  const refreshCurrentView = async () => {
-    try {
-      if (state.view === "books") {
-        await loadBooks(getFormValues(els.bookSearchForm));
-      } else if (state.view === "borrow") {
-        await loadHistory();
-        await loadOverdue();
-      } else if (state.view === "members") {
-        await loadMembers();
-      } else if (state.view === "notifications") {
-        await loadNotifications();
-      } else if (state.view === "reports") {
-        await loadReports();
+  const renderOverdueReport = (records) => {
+    if (!records.length) {
+      elements.overdueReport.innerHTML = emptyState("No overdue books", "All active loans are within their due dates.");
+      return;
+    }
+
+    elements.overdueReport.innerHTML = records.map((record) => `
+      <article class="table-row"><div><h3>${escapeHtml(record.book?.title || "Unknown book")}</h3><p>${escapeHtml(record.member?.name || "Member")} - ${escapeHtml(record.member?.email || "")}</p></div><div><p>Due</p><h3>${escapeHtml(formatDate(record.dueDate))}</h3></div><div><span class="status-pill overdue">Overdue</span></div><div></div></article>
+    `).join("");
+  };
+
+  const openBookDialog = async () => {
+    if (!state.categories.length) {
+      await loadCategories();
+    }
+    elements.bookForm.reset();
+    elements.bookDialog.showModal();
+  };
+
+  const saveBook = async () => {
+    const body = getFormData(elements.bookForm);
+    ["semester", "publishedYear", "totalCopies"].forEach((field) => {
+      if (body[field] !== undefined) {
+        body[field] = Number(body[field]);
       }
+    });
+
+    await api("/api/v1/books", { method: "POST", body });
+    elements.bookDialog.close();
+    showToast("Book added to the catalog.");
+    state.catalog.page = 1;
+    await loadCatalog();
+  };
+
+  const openProfileDialog = () => {
+    elements.profileForm.name.value = state.user.name || "";
+    elements.profileForm.phone.value = state.user.phone || "";
+    elements.profileForm.address.value = state.user.address || "";
+    if (isMember()) {
+      elements.profileForm.semester.value = state.user.semester || 1;
+    }
+    elements.profileDialog.showModal();
+  };
+
+  const saveProfile = async () => {
+    const body = getFormData(elements.profileForm);
+    if (body.semester !== undefined) {
+      body.semester = Number(body.semester);
+    }
+    const payload = await api("/api/v1/auth/me", { method: "PATCH", body });
+    state.user = payload.data.user;
+    localStorage.setItem("lmsUser", JSON.stringify(state.user));
+    elements.profileDialog.close();
+    renderProfile();
+    showToast("Profile updated.");
+    await loadOverview();
+  };
+
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    setAuthMessage();
+
+    try {
+      setApiBase();
+      const payload = await api("/api/v1/auth/login", {
+        method: "POST",
+        body: getFormData(elements.loginForm)
+      });
+      saveSession(payload.token, payload.data.user);
+      await enterApp();
+      showToast("Signed in successfully.");
     } catch (error) {
-      showToast(error.message);
+      setAuthMessage(error.message);
+    }
+  };
+
+  const handleSignup = async (event) => {
+    event.preventDefault();
+    setAuthMessage();
+
+    const body = getFormData(elements.signupForm);
+    if (body.password !== body.confirmPassword) {
+      setAuthMessage("Passwords do not match.");
+      return;
+    }
+
+    delete body.confirmPassword;
+    body.role = "member";
+    body.semester = Number(body.semester);
+    body.enrollmentYear = Number(body.enrollmentYear);
+
+    try {
+      setApiBase();
+      const payload = await api("/api/v1/auth/register", { method: "POST", body });
+      saveSession(payload.token, payload.data.user);
+      await enterApp();
+      showToast("Account created and saved to the database.");
+    } catch (error) {
+      setAuthMessage(error.message);
     }
   };
 
   const registerEvents = () => {
-    document.querySelectorAll(".nav-item").forEach((button) => {
-      button.addEventListener("click", () => switchView(button.dataset.view));
+    $$("[data-auth-mode]").forEach((button) => {
+      button.addEventListener("click", () => switchAuthMode(button.dataset.authMode));
     });
 
-    els.apiBaseInput.addEventListener("change", () => {
-      normalizeApiBase();
-      refreshCurrentView();
-    });
-
-    els.refreshBtn.addEventListener("click", refreshCurrentView);
-    document.getElementById("loadHistoryBtn").addEventListener("click", loadHistory);
-    document.getElementById("loadOverdueBtn").addEventListener("click", loadOverdue);
-    document.getElementById("loadMembersBtn").addEventListener("click", loadMembers);
-    document.getElementById("loadNotificationsBtn").addEventListener("click", loadNotifications);
-
-    els.loginForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-
-      try {
-        const json = await api("/api/v1/auth/login", {
-          method: "POST",
-          body: getFormValues(els.loginForm)
-        });
-
-        saveSession({
-          token: json.token,
-          user: json.data.user
-        });
-        showToast("Login successful.");
-        await refreshCurrentView();
-      } catch (error) {
-        showToast(error.message);
-      }
-    });
-
-    document.querySelectorAll("[data-demo-login]").forEach((button) => {
+    $$("[data-demo-account]").forEach((button) => {
       button.addEventListener("click", () => {
-        const account = demoAccounts[button.dataset.demoLogin];
-        els.loginForm.email.value = account.email;
-        els.loginForm.password.value = account.password;
+        const account = demoAccounts[button.dataset.demoAccount];
+        elements.loginForm.email.value = account.email;
+        elements.loginForm.password.value = account.password;
+        elements.loginForm.requestSubmit();
       });
     });
 
-    els.logoutBtn.addEventListener("click", () => {
+    elements.loginForm.addEventListener("submit", handleLogin);
+    elements.signupForm.addEventListener("submit", handleSignup);
+    elements.apiBaseInput.addEventListener("change", setApiBase);
+
+    $$(".nav-button").forEach((button) => {
+      button.addEventListener("click", () => switchView(button.dataset.view));
+    });
+    $$("[data-go-view]").forEach((button) => {
+      button.addEventListener("click", () => switchView(button.dataset.goView));
+    });
+
+    $("#menuButton").addEventListener("click", () => elements.sidebar.classList.toggle("is-open"));
+    $("#refreshButton").addEventListener("click", loadCurrentView);
+    $("#globalSearchButton").addEventListener("click", async () => {
+      await switchView("catalog");
+      elements.catalogSearchInput.focus();
+    });
+    $("#profileButton").addEventListener("click", openProfileDialog);
+    $("#logoutBtn").addEventListener("click", () => {
       clearSession();
+      showAuth("login");
       showToast("Signed out.");
-      refreshCurrentView();
     });
 
-    els.bookSearchForm.addEventListener("submit", async (event) => {
+    elements.catalogFilterForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-      await loadBooks(getFormValues(els.bookSearchForm));
+      state.catalog.page = 1;
+      await loadCatalog();
+    });
+    $("#clearFiltersButton").addEventListener("click", async () => {
+      elements.catalogFilterForm.reset();
+      state.catalog.page = 1;
+      await loadCatalog();
+    });
+    elements.previousPageButton.addEventListener("click", async () => {
+      state.catalog.page = Math.max(1, state.catalog.page - 1);
+      await loadCatalog();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    elements.nextPageButton.addEventListener("click", async () => {
+      state.catalog.page = Math.min(state.catalog.pages, state.catalog.page + 1);
+      await loadCatalog();
+      window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
-    els.categoryForm.addEventListener("submit", async (event) => {
+    $("#historyStatusFilter").addEventListener("change", loadHistory);
+    $("#notificationFilter").addEventListener("change", loadNotifications);
+    $("#memberStatusFilter").addEventListener("change", loadMembers);
+    $("#memberSearchInput").addEventListener("change", loadMembers);
+    $("#addBookButton").addEventListener("click", openBookDialog);
+    elements.bookForm.addEventListener("submit", async (event) => {
       event.preventDefault();
-
       try {
-        await api("/api/v1/categories", {
-          method: "POST",
-          body: getFormValues(els.categoryForm)
-        });
-        els.categoryForm.reset();
-        showToast("Category saved.");
-        await loadCategories();
+        await saveBook();
       } catch (error) {
-        showToast(error.message);
+        showToast(error.message, "error");
+      }
+    });
+    elements.profileForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        await saveProfile();
+      } catch (error) {
+        showToast(error.message, "error");
+      }
+    });
+    elements.issueForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        await submitIssue();
+      } catch (error) {
+        showToast(error.message, "error");
       }
     });
 
-    els.bookForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
+    $$('[data-close-dialog]').forEach((button) => {
+      button.addEventListener("click", () => $(`#${button.dataset.closeDialog}`).close());
+    });
 
-      try {
-        const body = getFormValues(els.bookForm);
-        body.totalCopies = Number(body.totalCopies);
-
-        await api("/api/v1/books", {
-          method: "POST",
-          body
-        });
-        els.bookForm.reset();
-        showToast("Book saved.");
-        await loadBooks(getFormValues(els.bookSearchForm));
-      } catch (error) {
-        showToast(error.message);
+    document.addEventListener("keydown", async (event) => {
+      if (event.key === "/" && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName)) {
+        event.preventDefault();
+        await switchView("catalog");
+        elements.catalogSearchInput.focus();
       }
     });
 
     document.body.addEventListener("click", async (event) => {
       const button = event.target.closest("[data-action]");
-
       if (!button) {
         return;
       }
 
       try {
-        const id = button.dataset.id;
-        const action = button.dataset.action;
-
-        if (action === "borrow-book") {
-          await borrowBook(id);
-        } else if (action === "delete-book") {
-          await deleteBook(id);
-        } else if (action === "return-book") {
-          await returnBook(id);
-        } else if (action === "save-member") {
-          await saveMember(id);
-        } else if (action === "read-notification") {
-          await markNotificationRead(id);
-        }
+        const { action, id } = button.dataset;
+        if (action === "borrow-book") await borrowBook(id);
+        if (action === "issue-book") await openIssueDialog(id);
+        if (action === "delete-book") await deleteBook(id);
+        if (action === "open-book") await openBookInCatalog(id);
+        if (action === "return-book") await returnBook(id);
+        if (action === "read-notification") await markNotificationRead(id);
+        if (action === "save-member") await saveMember(id);
       } catch (error) {
-        showToast(error.message);
+        showToast(error.message, "error");
       }
     });
   };
 
-  const boot = async () => {
-    if (window.location.protocol !== "file:" && !localStorage.getItem("lmsApiBase")) {
-      state.apiBase = window.location.port === "5000"
-        ? window.location.origin
-        : "http://localhost:5000";
+  const restoreSession = async () => {
+    if (!state.token || !state.user) {
+      showAuth("login");
+      return;
     }
 
-    els.apiBaseInput.value = state.apiBase;
-    renderSession();
+    try {
+      const payload = await api("/api/v1/auth/me");
+      state.user = payload.data.user;
+      localStorage.setItem("lmsUser", JSON.stringify(state.user));
+      await enterApp();
+    } catch (error) {
+      clearSession();
+      showAuth("login");
+    }
+  };
+
+  const boot = async () => {
+    elements.apiBaseInput.value = state.apiBase;
     registerEvents();
-    await refreshCurrentView();
+    await restoreSession();
   };
 
   boot().catch((error) => {
-    showToast(error.message);
+    setAuthMessage(error.message);
   });
 }());

@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: stackshelf-library-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: LIBRARIAN_INVITE_CODE
+        sync: false
+      - key: BORROW_DAYS
+        value: 14
+      - key: FINE_PER_DAY
+        value: 5
+      - key: RATE_LIMIT_WINDOW_MINUTES
+        value: 15
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 300
+      - key: CORS_ORIGIN
+        value: "*"

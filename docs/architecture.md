@@ -12,6 +12,41 @@ flowchart LR
   Controllers --> Reports["Aggregation Reports"]
 ```
 
+## Borrowing Flow
+
+```mermaid
+sequenceDiagram
+  participant Member
+  participant API as Express API
+  participant Book as Book Model
+  participant Borrow as BorrowRecord Model
+  participant Notify as Notification Model
+
+  Member->>API: POST /api/v1/borrows/:bookId
+  API->>Book: Check availableCopies
+  API->>Borrow: Create borrowed record with dueDate
+  API->>Book: Decrease availableCopies
+  API->>Notify: Create borrow confirmation
+  API-->>Member: Borrow record response
+
+  Member->>API: PATCH /api/v1/borrows/return/:recordId
+  API->>Borrow: Mark returned and calculate fine
+  API->>Book: Increase availableCopies
+  API->>Notify: Create return confirmation
+  API-->>Member: Updated borrow record
+```
+
+## Overdue And Reporting Flow
+
+```mermaid
+flowchart TD
+  DueDate["Borrow due date passes"] --> OverdueJob["Overdue check in borrow/report APIs"]
+  OverdueJob --> UpdateRecord["BorrowRecord status = overdue"]
+  UpdateRecord --> Alert["Create overdue notification"]
+  UpdateRecord --> Reports["Inventory, overdue, active member, and popular book reports"]
+  Reports --> Librarian["Librarian dashboard / Postman / Swagger"]
+```
+
 ## Collections
 
 ```mermaid

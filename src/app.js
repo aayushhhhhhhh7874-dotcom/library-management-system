@@ -2,6 +2,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const express = require("express");
 const helmet = require("helmet");
+const mongoose = require("mongoose");
 const path = require("path");
 const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
@@ -30,8 +31,10 @@ const limiter = rateLimit({
 
 app.use(helmet());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "*",
-  credentials: true
+  origin: process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
+    : "*",
+  credentials: false
 }));
 app.use(express.json({ limit: "20kb" }));
 app.use(limiter);
@@ -51,8 +54,11 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
+  const databaseConnected = mongoose.connection.readyState === 1;
+
   res.status(200).json({
     status: "success",
+    database: databaseConnected ? "connected" : "disconnected",
     uptime: process.uptime(),
     timestamp: new Date().toISOString()
   });

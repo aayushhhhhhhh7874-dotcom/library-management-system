@@ -6,6 +6,8 @@ const { BORROW_STATUS } = require("../constants/roles");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/AppError");
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const buildCategoryFilter = async (category) => {
   if (!category) {
     return null;
@@ -16,7 +18,7 @@ const buildCategoryFilter = async (category) => {
   }
 
   const matchedCategory = await Category.findOne({
-    name: new RegExp(`^${category}$`, "i")
+    name: new RegExp(`^${escapeRegex(category)}$`, "i")
   });
 
   return matchedCategory ? matchedCategory._id : "__no_category_match__";
@@ -46,6 +48,9 @@ const getBooks = catchAsync(async (req, res) => {
     category,
     author,
     availability,
+    semester,
+    subjectCode,
+    course,
     page,
     limit,
     sort
@@ -54,16 +59,31 @@ const getBooks = catchAsync(async (req, res) => {
   const filter = {};
 
   if (search) {
-    const regex = new RegExp(search, "i");
+    const regex = new RegExp(escapeRegex(search), "i");
     filter.$or = [
       { title: regex },
       { isbn: regex },
-      { author: regex }
+      { author: regex },
+      { subjectCode: regex },
+      { publisher: regex },
+      { tags: regex }
     ];
   }
 
   if (author) {
-    filter.author = new RegExp(author, "i");
+    filter.author = new RegExp(escapeRegex(author), "i");
+  }
+
+  if (semester) {
+    filter.semester = semester;
+  }
+
+  if (subjectCode) {
+    filter.subjectCode = new RegExp(`^${escapeRegex(subjectCode)}$`, "i");
+  }
+
+  if (course) {
+    filter.course = new RegExp(`^${escapeRegex(course)}$`, "i");
   }
 
   const categoryFilter = await buildCategoryFilter(category);

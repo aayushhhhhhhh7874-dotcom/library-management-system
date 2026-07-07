@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Password is required."],
-      minlength: 6,
+      minlength: 8,
       select: false
     },
     role: {
@@ -36,6 +36,28 @@ const userSchema = new mongoose.Schema(
     address: {
       type: String,
       trim: true
+    },
+    studentId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      uppercase: true,
+      trim: true
+    },
+    department: {
+      type: String,
+      default: "Computer Science and Engineering",
+      trim: true
+    },
+    semester: {
+      type: Number,
+      min: 1,
+      max: 8
+    },
+    enrollmentYear: {
+      type: Number,
+      min: 2000,
+      max: new Date().getFullYear()
     },
     membershipStatus: {
       type: String,
@@ -59,6 +81,8 @@ const userSchema = new mongoose.Schema(
     }
   }
 );
+
+userSchema.index({ role: 1, membershipStatus: 1 });
 
 userSchema.pre("save", async function hashPassword(next) {
   if (!this.isModified("password")) {

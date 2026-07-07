@@ -9,7 +9,11 @@ const connectDB = async () => {
 
   mongoose.set("strictQuery", true);
 
-  const connection = await mongoose.connect(uri);
+  const connection = await mongoose.connect(uri, {
+    maxPoolSize: 10,
+    minPoolSize: 1,
+    serverSelectionTimeoutMS: 10000
+  });
   console.log(`MongoDB connected: ${connection.connection.host}`);
 };
 
