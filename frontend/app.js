@@ -199,8 +199,10 @@
   };
 
   const setApiBase = () => {
-    state.apiBase = elements.apiBaseInput.value.trim().replace(/\/$/, "") || defaultApiBase;
-    elements.apiBaseInput.value = state.apiBase;
+    state.apiBase = (elements.apiBaseInput?.value || defaultApiBase).trim().replace(/\/$/, "") || defaultApiBase;
+    if (elements.apiBaseInput) {
+      elements.apiBaseInput.value = state.apiBase;
+    }
     localStorage.setItem("lmsApiBase", state.apiBase);
   };
 
@@ -226,7 +228,7 @@
           body: options.body !== undefined ? JSON.stringify(options.body) : undefined
         });
       } catch (error) {
-        throw new Error(`Cannot reach the API at ${state.apiBase}.`);
+        throw new Error("Library server is not running. Start the local demo and try again.");
       }
 
       if (response.status === 204) {
@@ -819,7 +821,7 @@
 
     elements.loginForm.addEventListener("submit", handleLogin);
     elements.signupForm.addEventListener("submit", handleSignup);
-    elements.apiBaseInput.addEventListener("change", setApiBase);
+    elements.apiBaseInput?.addEventListener("change", setApiBase);
 
     $$(".nav-button").forEach((button) => {
       button.addEventListener("click", () => switchView(button.dataset.view));
@@ -943,7 +945,9 @@
   };
 
   const boot = async () => {
-    elements.apiBaseInput.value = state.apiBase;
+    if (elements.apiBaseInput) {
+      elements.apiBaseInput.value = state.apiBase;
+    }
     registerEvents();
     await restoreSession();
   };
