@@ -20,7 +20,7 @@ components:
       properties:
         email:
           type: string
-          example: librarian@example.com
+          example: aayush.kr0804@gmail.com
         password:
           type: string
           example: Password@123

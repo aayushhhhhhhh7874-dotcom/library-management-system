@@ -16,6 +16,12 @@ const borrowBook = {
   ...bookParam,
   body: Joi.object({
     memberId: objectId,
+    memberName: Joi.string().max(80).allow("", null),
+    studentId: Joi.string().max(40).allow("", null),
+    email: Joi.string().email().allow("", null),
+    phone: Joi.string().max(20).allow("", null),
+    semester: Joi.number().integer().min(1).max(8),
+    enrollmentYear: Joi.number().integer().min(2000).max(new Date().getFullYear()),
     dueDate: Joi.date().greater("now"),
     notes: Joi.string().max(300).allow("", null)
   })

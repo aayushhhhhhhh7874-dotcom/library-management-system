@@ -22,6 +22,8 @@ StackShelf is a full-stack library management project for BTech Computer Science
 
 ## Phase 2 Submission
 
+- Quick presentation guide: `PROJECT_DEMO_GUIDE.md`
+- Java upgrade notes: `docs/java-upgrade.md`
 - Submission checklist: `docs/phase-2-submission.md`
 - Architecture diagrams: `docs/architecture.md`
 - Deployment guide: `docs/deployment.md`
@@ -43,9 +45,26 @@ Demo accounts:
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Librarian | `librarian@example.com` | `Password@123` |
+| Librarian | `aayush.kr0804@gmail.com` | `Password@123` |
 | Student member | `member@example.com` | `Password@123` |
 | Member with overdue book | `late@example.com` | `Password@123` |
+
+## Advanced Java Demo
+
+Use this version when you want to show that the project also has a Java backend. It uses the installed JDK only, so Maven and external downloads are not required.
+
+```bash
+cd "C:\Users\ak960\OneDrive\Desktop\ayush\internship project"
+start-java-demo.bat
+```
+
+Open `http://127.0.0.1:8080`. The Java server serves the professional frontend and implements the same main API modules with an in-memory CSE library dataset.
+
+Java code:
+
+- `java-backend/StackShelfJavaServer.java`
+- `java-backend/README.md`
+- `start-java-demo.bat`
 
 ## Recommended Start With Docker
 
@@ -83,7 +102,7 @@ Important: `npm run seed` clears the configured database and recreates the full 
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Librarian | `librarian@example.com` | `Password@123` |
+| Librarian | `aayush.kr0804@gmail.com` | `Password@123` |
 | Student member | `member@example.com` | `Password@123` |
 | Member with overdue book | `late@example.com` | `Password@123` |
 

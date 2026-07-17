@@ -57,6 +57,6 @@ Demo accounts:
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Librarian | `librarian@example.com` | `Password@123` |
+| Librarian | `aayush.kr0804@gmail.com` | `Password@123` |
 | Student member | `member@example.com` | `Password@123` |
 | Overdue member | `late@example.com` | `Password@123` |

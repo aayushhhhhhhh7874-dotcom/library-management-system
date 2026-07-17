@@ -133,8 +133,8 @@ const buildInitialDb = () => {
   const users = [
     createUser({
       _id: "user-librarian",
-      name: "Library Admin",
-      email: "librarian@example.com",
+      name: "Aayush Kumar",
+      email: "aayush.kr0804@gmail.com",
       role: "librarian",
       phone: "9876543210",
       borrowLimit: 20,
@@ -704,9 +704,52 @@ const handleBorrowBook = async (req, res, bookId) => {
   }
 
   const body = await parseBody(req);
-  const member = user.role === "librarian"
+  let member = user.role === "librarian"
     ? getUser(db, body.memberId)
     : user;
+
+  if (user.role === "librarian" && !member) {
+    const studentId = String(body.studentId || "").trim().toUpperCase();
+    const memberName = String(body.memberName || "").trim();
+    const email = String(body.email || "").trim().toLowerCase();
+
+    if (!studentId || !memberName) {
+      sendError(res, 400, "Student name and student ID are required to issue books.");
+      return;
+    }
+
+    member = db.users.find((item) => (
+      item.role === "member" &&
+      (item.studentId === studentId || (email && item.email === email))
+    ));
+
+    if (!member) {
+      member = createUser({
+        name: memberName,
+        email: email || `${studentId.toLowerCase()}@stackshelf.local`,
+        password: "Password@123",
+        role: "member",
+        phone: body.phone || "",
+        studentId,
+        semester: Number(body.semester || 1),
+        enrollmentYear: Number(body.enrollmentYear || new Date().getFullYear()),
+        membershipStatus: "active",
+        borrowLimit: 5
+      });
+      db.users.push(member);
+      db.notifications.push({
+        _id: createId("notification"),
+        user: member._id,
+        type: "welcome",
+        title: "Welcome to StackShelf",
+        message: "Your member account was created at the issue desk.",
+        isRead: false,
+        relatedBorrowRecord: null,
+        createdAt: now(),
+        updatedAt: now()
+      });
+    }
+  }
   const book = getBook(db, bookId);
 
   if (!member || member.role !== "member") {
@@ -1219,7 +1262,7 @@ server.listen(port, "127.0.0.1", async () => {
   console.log(`StackShelf local API running at http://localhost:${port}`);
   console.log(`Local database: ${dbPath}`);
   console.log("Demo accounts:");
-  console.log("  Librarian: librarian@example.com / Password@123");
+  console.log("  Librarian: aayush.kr0804@gmail.com / Password@123");
   console.log("  Student: member@example.com / Password@123");
   console.log("  Overdue: late@example.com / Password@123");
 });

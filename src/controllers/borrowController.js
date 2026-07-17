@@ -42,13 +42,43 @@ const markOverdueRecords = async () => {
 
 const resolveBorrowingMember = async (req) => {
   if (req.user.role === ROLES.LIBRARIAN) {
-    if (!req.body.memberId) {
-      throw new AppError("memberId is required when a librarian issues a book.", 400);
+    if (req.body.memberId) {
+      return User.findOne({
+        _id: req.body.memberId,
+        role: ROLES.MEMBER
+      });
     }
 
-    return User.findOne({
-      _id: req.body.memberId,
-      role: ROLES.MEMBER
+    const studentId = String(req.body.studentId || "").trim().toUpperCase();
+    const memberName = String(req.body.memberName || "").trim();
+
+    if (!studentId || !memberName) {
+      throw new AppError("Student name and student ID are required to issue books.", 400);
+    }
+
+    const existingMember = await User.findOne({
+      role: ROLES.MEMBER,
+      $or: [
+        { studentId },
+        ...(req.body.email ? [{ email: String(req.body.email).toLowerCase() }] : [])
+      ]
+    });
+
+    if (existingMember) {
+      return existingMember;
+    }
+
+    return User.create({
+      name: memberName,
+      email: req.body.email || `${studentId.toLowerCase()}@stackshelf.local`,
+      password: "Password@123",
+      role: ROLES.MEMBER,
+      phone: req.body.phone,
+      studentId,
+      semester: req.body.semester || 1,
+      enrollmentYear: req.body.enrollmentYear || new Date().getFullYear(),
+      membershipStatus: MEMBERSHIP_STATUS.ACTIVE,
+      borrowLimit: 5
     });
   }
 

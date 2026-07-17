@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#17324d">
+    <meta name="theme-color" content="#132823">
     <title>StackShelf CSE Library</title>
     <link rel="stylesheet" href="./styles.css">
   </head>
@@ -63,7 +63,7 @@
             </div>
             <label class="field">
               <span>Email address</span>
-              <input name="email" type="email" autocomplete="email" value="librarian@example.com" required>
+              <input name="email" type="email" autocomplete="email" value="aayush.kr0804@gmail.com" required>
             </label>
             <label class="field">
               <span>Password</span>
@@ -141,7 +141,7 @@
           </form>
 
           <p id="authMessage" class="form-message" role="alert"></p>
-          <input id="apiBaseInput" type="hidden" value="http://localhost:5000">
+          <input id="apiBaseInput" type="hidden" value="http://127.0.0.1:8080">
         </div>
       </div>
     </section>
@@ -197,6 +197,15 @@
 
           <div id="overviewMetrics" class="metric-strip"></div>
 
+          <div class="operations-panel">
+            <div class="operations-copy">
+              <p class="kicker">Command center</p>
+              <h2>Today&apos;s library operations</h2>
+              <p>Track inventory readiness, borrowing pressure, and member service activity from one professional dashboard.</p>
+            </div>
+            <div id="operationsQueue" class="operations-grid"></div>
+          </div>
+
           <div class="overview-grid">
             <section class="section-block">
               <div class="section-heading"><div><p class="kicker">Recommended</p><h2 id="recommendationTitle">For your semester</h2></div><button class="text-button" type="button" data-go-view="catalog">View all</button></div>
@@ -223,6 +232,17 @@
           </div>
 
           <div class="result-bar"><p id="catalogResultText">Loading catalog</p><button id="clearFiltersButton" class="text-button" type="button">Clear filters</button></div>
+          <section id="issueCartPanel" class="issue-cart librarian-only" aria-live="polite">
+            <div class="issue-cart-header">
+              <div><p class="kicker">Issue cart</p><h2>Selected books</h2></div>
+              <span id="cartCount" class="cart-count">0 books</span>
+            </div>
+            <div id="cartItems" class="cart-items"></div>
+            <div class="issue-cart-actions">
+              <button id="clearCartButton" class="button button-secondary" type="button">Clear cart</button>
+              <button id="openCartIssueButton" class="button button-primary" type="button">Issue selected</button>
+            </div>
+          </section>
           <div id="bookGrid" class="book-grid"></div>
           <nav class="pagination" aria-label="Catalog pages"><button id="previousPageButton" class="button button-secondary" type="button">Previous</button><span id="pageStatus">Page 1</span><button id="nextPageButton" class="button button-secondary" type="button">Next</button></nav>
         </section>
@@ -292,6 +312,22 @@
         <label class="field"><span>Active member</span><select id="issueMemberSelect" name="memberId" required><option value="">Select member</option></select></label>
         <label class="field"><span>Notes</span><textarea name="notes" rows="3" placeholder="Optional issue note"></textarea></label>
         <div class="modal-actions"><button class="button button-secondary" type="button" data-close-dialog="issueDialog">Cancel</button><button class="button button-primary" type="submit">Issue book</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="cartIssueDialog" class="modal">
+      <form id="cartIssueForm" method="dialog" class="modal-form">
+        <div class="modal-header"><div><p class="kicker">Borrow desk</p><h2>Issue cart to student</h2></div><button class="icon-button" type="button" data-close-dialog="cartIssueDialog" aria-label="Close">Close</button></div>
+        <div id="cartIssueList" class="cart-issue-list"></div>
+        <div class="form-grid two-columns">
+          <label class="field"><span>Student name</span><input name="memberName" type="text" autocomplete="name" required></label>
+          <label class="field"><span>Student ID</span><input name="studentId" type="text" placeholder="CSE2026001" required></label>
+          <label class="field"><span>Semester</span><select name="semester" required><option value="">Select semester</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></label>
+          <label class="field"><span>Phone</span><input name="phone" type="tel" placeholder="Student phone"></label>
+          <label class="field field-wide"><span>Email</span><input name="email" type="email" placeholder="student@example.com"></label>
+          <label class="field field-wide"><span>Issue notes</span><textarea name="notes" rows="3" placeholder="Optional note for this issue"></textarea></label>
+        </div>
+        <div class="modal-actions"><button class="button button-secondary" type="button" data-close-dialog="cartIssueDialog">Cancel</button><button class="button button-primary" type="submit">Issue all books</button></div>
       </form>
     </dialog>
 

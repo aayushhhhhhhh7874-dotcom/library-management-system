@@ -46,8 +46,8 @@ const createCategories = async () => {
 
 const createUsers = async () => User.create([
   {
-    name: "Dr. Ananya Sharma",
-    email: "librarian@example.com",
+    name: "Aayush Kumar",
+    email: "aayush.kr0804@gmail.com",
     password: "Password@123",
     role: ROLES.LIBRARIAN,
     phone: "9876500001",
@@ -203,7 +203,7 @@ const seed = async () => {
   await createActivity(users, books);
 
   console.log(`Database seeded with ${categoryIds.size} categories and ${books.length} BTech CSE books.`);
-  console.log("Librarian: librarian@example.com / Password@123");
+  console.log("Librarian: aayush.kr0804@gmail.com / Password@123");
   console.log("Member: member@example.com / Password@123");
   console.log("Overdue member: late@example.com / Password@123");
 };

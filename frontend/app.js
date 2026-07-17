@@ -7,12 +7,17 @@
     }
   };
 
-  const defaultApiBase = window.location.protocol !== "file:" && window.location.port === "5000"
-    ? window.location.origin
-    : "http://localhost:5000";
+  const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname)
+    && !["5000", "8080"].includes(window.location.port);
+  const defaultApiBase = window.location.protocol === "file:" || isLocalPreview
+    ? "http://127.0.0.1:8080"
+    : window.location.origin;
+  const savedApiBase = localStorage.getItem("lmsApiBase");
+  const useDefaultApiBase = ["http://localhost:5000", "http://localhost:8080"].includes(savedApiBase)
+    && defaultApiBase === "http://127.0.0.1:8080";
 
   const state = {
-    apiBase: localStorage.getItem("lmsApiBase") || defaultApiBase,
+    apiBase: useDefaultApiBase ? defaultApiBase : savedApiBase || defaultApiBase,
     token: localStorage.getItem("lmsToken") || "",
     user: safeJsonParse(localStorage.getItem("lmsUser")),
     view: "overview",
@@ -21,8 +26,10 @@
       page: 1,
       limit: 24,
       pages: 1,
-      total: 0
+      total: 0,
+      books: []
     },
+    cart: safeJsonParse(localStorage.getItem("lmsIssueCart"), []),
     issueBookId: null,
     loadingCount: 0
   };
@@ -50,6 +57,7 @@
     apiStatusText: $("#apiStatusText"),
     apiStatusDetail: $("#apiStatusDetail"),
     overviewMetrics: $("#overviewMetrics"),
+    operationsQueue: $("#operationsQueue"),
     recommendedBooks: $("#recommendedBooks"),
     overviewActivity: $("#overviewActivity"),
     catalogFilterForm: $("#catalogFilterForm"),
@@ -57,6 +65,10 @@
     categoryFilter: $("#categoryFilter"),
     catalogResultText: $("#catalogResultText"),
     bookGrid: $("#bookGrid"),
+    cartCount: $("#cartCount"),
+    cartItems: $("#cartItems"),
+    clearCartButton: $("#clearCartButton"),
+    openCartIssueButton: $("#openCartIssueButton"),
     pageStatus: $("#pageStatus"),
     previousPageButton: $("#previousPageButton"),
     nextPageButton: $("#nextPageButton"),
@@ -74,7 +86,10 @@
     profileForm: $("#profileForm"),
     issueDialog: $("#issueDialog"),
     issueForm: $("#issueForm"),
-    issueMemberSelect: $("#issueMemberSelect")
+    issueMemberSelect: $("#issueMemberSelect"),
+    cartIssueDialog: $("#cartIssueDialog"),
+    cartIssueForm: $("#cartIssueForm"),
+    cartIssueList: $("#cartIssueList")
   };
 
   const viewDetails = {
@@ -87,10 +102,11 @@
   };
 
   const demoAccounts = {
-    librarian: { email: "librarian@example.com", password: "Password@123" },
+    librarian: { email: "aayush.kr0804@gmail.com", password: "Password@123" },
     member: { email: "member@example.com", password: "Password@123" },
     late: { email: "late@example.com", password: "Password@123" }
   };
+  const serverOfflineMessage = "Library server is not running. Double-click start-java-demo.bat, keep that server window open, then open http://127.0.0.1:8080.";
 
   const escapeHtml = (value) => String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -228,7 +244,16 @@
           body: options.body !== undefined ? JSON.stringify(options.body) : undefined
         });
       } catch (error) {
-        throw new Error("Library server is not running. Start the local demo and try again.");
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        try {
+          response = await fetch(`${state.apiBase}${path}`, {
+            ...options,
+            headers,
+            body: options.body !== undefined ? JSON.stringify(options.body) : undefined
+          });
+        } catch (retryError) {
+          throw new Error(serverOfflineMessage);
+        }
       }
 
       if (response.status === 204) {
@@ -259,6 +284,102 @@
   `;
 
   const loadingState = () => "<div class=\"loading-state\"></div>";
+
+  const cartCountLabel = () => `${state.cart.length} ${state.cart.length === 1 ? "book" : "books"}`;
+
+  const saveCart = () => {
+    localStorage.setItem("lmsIssueCart", JSON.stringify(state.cart));
+  };
+
+  const isBookInCart = (bookId) => state.cart.some((item) => item.id === bookId);
+
+  const renderCart = () => {
+    if (!elements.cartItems || !elements.cartCount) {
+      return;
+    }
+
+    elements.cartCount.textContent = cartCountLabel();
+    elements.openCartIssueButton.disabled = state.cart.length === 0;
+    elements.clearCartButton.disabled = state.cart.length === 0;
+
+    if (!state.cart.length) {
+      elements.cartItems.innerHTML = emptyState("Cart is empty", "Add available books from the catalog, then issue them together.");
+      return;
+    }
+
+    elements.cartItems.innerHTML = state.cart.map((book) => `
+      <div class="cart-item">
+        <div><strong title="${escapeHtml(book.title)}">${escapeHtml(book.title)}</strong><span>${escapeHtml(book.subjectCode || "CSE")} - Semester ${escapeHtml(book.semester || "-")}</span></div>
+        <button class="text-button" type="button" data-action="remove-cart-book" data-id="${escapeHtml(book.id)}">Remove</button>
+      </div>
+    `).join("");
+  };
+
+  const refreshCatalogCards = () => {
+    if (state.view === "catalog" && state.catalog.books.length) {
+      renderBooks(state.catalog.books);
+    }
+  };
+
+  const addBookToCart = (bookId) => {
+    const book = state.catalog.books.find((item) => item._id === bookId);
+
+    if (!book) {
+      showToast("Book is not visible in the current catalog page.", "error");
+      return;
+    }
+
+    if (book.availableCopies < 1) {
+      showToast("This book is currently unavailable.", "error");
+      return;
+    }
+
+    if (isBookInCart(bookId)) {
+      showToast("Book is already in the issue cart.", "error");
+      return;
+    }
+
+    state.cart.push({
+      id: book._id,
+      title: book.title,
+      author: book.author,
+      subjectCode: book.subjectCode,
+      semester: book.semester
+    });
+    saveCart();
+    renderCart();
+    refreshCatalogCards();
+    showToast("Book added to issue cart.");
+  };
+
+  const removeBookFromCart = (bookId) => {
+    state.cart = state.cart.filter((book) => book.id !== bookId);
+    saveCart();
+    renderCart();
+    refreshCatalogCards();
+  };
+
+  const clearCart = () => {
+    state.cart = [];
+    saveCart();
+    renderCart();
+    refreshCatalogCards();
+  };
+
+  const openCartIssueDialog = () => {
+    if (!state.cart.length) {
+      showToast("Add at least one book to the cart.", "error");
+      return;
+    }
+
+    elements.cartIssueList.innerHTML = state.cart.map((book, index) => `
+      <div class="cart-issue-item">
+        <div><strong>${index + 1}. ${escapeHtml(book.title)}</strong><span>${escapeHtml(book.subjectCode || "CSE")} - Semester ${escapeHtml(book.semester || "-")}</span></div>
+      </div>
+    `).join("");
+    elements.cartIssueForm.reset();
+    elements.cartIssueDialog.showModal();
+  };
 
   const showAuth = (mode = "login") => {
     elements.authScreen.classList.remove("is-hidden");
@@ -301,6 +422,7 @@
     elements.appShell.classList.remove("is-hidden");
     renderRoleVisibility();
     renderProfile();
+    renderCart();
     await Promise.allSettled([
       checkHealth(),
       loadCategories(),
@@ -319,6 +441,23 @@
       elements.apiStatusDot.className = "offline";
       elements.apiStatusText.textContent = "API offline";
       elements.apiStatusDetail.textContent = state.apiBase;
+    }
+  };
+
+  const checkLoginServerStatus = async () => {
+    if (elements.authScreen.classList.contains("is-hidden")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${state.apiBase}/health`, { cache: "no-store" });
+      if (response.ok && elements.authMessage.textContent === serverOfflineMessage) {
+        setAuthMessage("Server connected. You can sign in now.", "success");
+      }
+    } catch (error) {
+      if (!elements.authMessage.textContent) {
+        setAuthMessage(serverOfflineMessage);
+      }
     }
   };
 
@@ -397,12 +536,35 @@
     const records = history.data.records || [];
     const activeLoans = records.filter((record) => record.status !== "returned").length;
     const overdueLoans = records.filter((record) => record.status === "overdue").length;
+    const totalTitles = allBooks.pagination.total;
+    const availableTitles = availableBooks.pagination.total;
 
     renderMetrics(elements.overviewMetrics, [
-      { value: allBooks.pagination.total, label: "Catalog titles", note: "BTech CSE collection" },
-      { value: availableBooks.pagination.total, label: "Available titles", note: "Ready to issue" },
+      { value: totalTitles, label: "Catalog titles", note: "BTech CSE collection" },
+      { value: availableTitles, label: "Available titles", note: "Ready to issue" },
       { value: state.categories.length, label: "Subject areas", note: "Across 8 semesters" },
       { value: activeLoans, label: isLibrarian() ? "Recent active loans" : "Your active loans", note: `${overdueLoans} overdue` }
+    ]);
+
+    renderOperations([
+      {
+        label: "Inventory readiness",
+        value: `${Math.round((availableTitles / Math.max(totalTitles, 1)) * 100)}%`,
+        detail: `${availableTitles.toLocaleString()} titles available for issue`,
+        status: "Stable"
+      },
+      {
+        label: "Borrowing pressure",
+        value: activeLoans,
+        detail: overdueLoans ? `${overdueLoans} overdue records need attention` : "All visible loans are on schedule",
+        status: overdueLoans ? "Action needed" : "Healthy"
+      },
+      {
+        label: "Academic coverage",
+        value: state.categories.length,
+        detail: "Subject areas mapped across the BTech CSE curriculum",
+        status: "Complete"
+      }
     ]);
 
     renderCompactBooks(recommendations.data.books || []);
@@ -416,6 +578,17 @@
         <span>${escapeHtml(metric.label)}</span>
         <em>${escapeHtml(metric.note || "")}</em>
       </div>
+    `).join("");
+  };
+
+  const renderOperations = (items) => {
+    elements.operationsQueue.innerHTML = items.map((item) => `
+      <article class="operation-card ${item.status === "Action needed" ? "needs-action" : ""}">
+        <span>${escapeHtml(item.status)}</span>
+        <strong>${escapeHtml(item.value)}</strong>
+        <h3>${escapeHtml(item.label)}</h3>
+        <p>${escapeHtml(item.detail)}</p>
+      </article>
     `).join("");
   };
 
@@ -469,7 +642,8 @@
     state.catalog.pages = Math.max(1, payload.pagination.pages);
     state.catalog.page = payload.pagination.page;
 
-    renderBooks(payload.data.books || []);
+    state.catalog.books = payload.data.books || [];
+    renderBooks(state.catalog.books);
     elements.catalogResultText.textContent = `${state.catalog.total.toLocaleString()} titles found`;
     elements.pageStatus.textContent = `Page ${state.catalog.page} of ${state.catalog.pages}`;
     elements.previousPageButton.disabled = state.catalog.page <= 1;
@@ -484,9 +658,10 @@
 
     elements.bookGrid.innerHTML = books.map((book) => {
       const available = book.availableCopies > 0;
+      const inCart = isBookInCart(book._id);
       const memberAction = isMember()
         ? `<button class="button button-primary" type="button" data-action="borrow-book" data-id="${escapeHtml(book._id)}" ${available ? "" : "disabled"}>Borrow</button>`
-        : `<button class="button button-secondary" type="button" data-action="issue-book" data-id="${escapeHtml(book._id)}" ${available ? "" : "disabled"}>Issue</button>`;
+        : `<button class="button button-secondary" type="button" data-action="add-cart-book" data-id="${escapeHtml(book._id)}" ${available && !inCart ? "" : "disabled"}>${inCart ? "Added" : "Add to cart"}</button>`;
       const deleteAction = isLibrarian()
         ? `<button class="button button-danger" type="button" data-action="delete-book" data-id="${escapeHtml(book._id)}">Delete</button>`
         : "";
@@ -543,6 +718,39 @@
     state.issueBookId = null;
     showToast("Book issued to member.");
     await loadCatalog();
+  };
+
+  const submitCartIssue = async () => {
+    if (!state.cart.length) {
+      showToast("Add at least one book to the cart.", "error");
+      return;
+    }
+
+    const formBody = getFormData(elements.cartIssueForm);
+    formBody.studentId = String(formBody.studentId || "").trim().toUpperCase();
+    formBody.memberName = String(formBody.memberName || "").trim();
+    formBody.semester = Number(formBody.semester);
+
+    if (!formBody.memberName || !formBody.studentId || !formBody.semester) {
+      showToast("Student name, student ID, and semester are required.", "error");
+      return;
+    }
+
+    let memberId = "";
+    for (const book of state.cart) {
+      const issueBody = memberId
+        ? { memberId, notes: formBody.notes || "" }
+        : formBody;
+      const payload = await api(`/api/v1/borrows/${book.id}`, { method: "POST", body: issueBody });
+      memberId = payload.data.borrowRecord.member?._id || memberId;
+    }
+
+    const issuedCount = state.cart.length;
+    const studentName = formBody.memberName;
+    clearCart();
+    elements.cartIssueDialog.close();
+    showToast(`${issuedCount} ${issuedCount === 1 ? "book" : "books"} issued to ${studentName}.`);
+    await Promise.all([loadCatalog(), updateNotificationBadge()]);
   };
 
   const deleteBook = async (bookId) => {
@@ -893,6 +1101,16 @@
         showToast(error.message, "error");
       }
     });
+    elements.cartIssueForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        await submitCartIssue();
+      } catch (error) {
+        showToast(error.message, "error");
+      }
+    });
+    elements.clearCartButton.addEventListener("click", clearCart);
+    elements.openCartIssueButton.addEventListener("click", openCartIssueDialog);
 
     $$('[data-close-dialog]').forEach((button) => {
       button.addEventListener("click", () => $(`#${button.dataset.closeDialog}`).close());
@@ -916,6 +1134,8 @@
         const { action, id } = button.dataset;
         if (action === "borrow-book") await borrowBook(id);
         if (action === "issue-book") await openIssueDialog(id);
+        if (action === "add-cart-book") addBookToCart(id);
+        if (action === "remove-cart-book") removeBookFromCart(id);
         if (action === "delete-book") await deleteBook(id);
         if (action === "open-book") await openBookInCatalog(id);
         if (action === "return-book") await returnBook(id);
@@ -949,6 +1169,8 @@
       elements.apiBaseInput.value = state.apiBase;
     }
     registerEvents();
+    window.setInterval(checkLoginServerStatus, 3000);
+    await checkLoginServerStatus();
     await restoreSession();
   };
 
